@@ -1,0 +1,22 @@
+# Build output
+build/
+
+# IDE
+.vscode/
+*.uvoptx
+*.uvguix.*
+*.scvd
+DebugConfig/
+RTE/
+
+# Keil MDK
+MDK-ARM/inverter/
+MDK-ARM/*.uvprojx.lnk
+
+# CubeMX temp
+.mxproject
+*.lnk
+
+# OS
+Thumbs.db
+Desktop.ini
