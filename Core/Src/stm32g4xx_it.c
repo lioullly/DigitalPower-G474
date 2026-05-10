@@ -22,6 +22,7 @@
 #include "stm32g4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "timebase_scheduler.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,7 +61,10 @@ extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern ADC_HandleTypeDef hadc4;
 /* USER CODE BEGIN EV */
-
+void ADC3_4_IRQHandler(void)
+{
+    HAL_ADC_IRQHandler(&hadc4);
+}
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -190,7 +194,7 @@ void SysTick_Handler(void)
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
-
+  Scheduler_Tick();
   /* USER CODE END SysTick_IRQn 1 */
 }
 

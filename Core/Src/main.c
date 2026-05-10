@@ -27,7 +27,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "user.h"
+#include "user_tasks.h"
+#include "timebase_scheduler.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -99,7 +101,7 @@ int main(void)
   MX_ADC4_Init();
   MX_I2C3_Init();
   /* USER CODE BEGIN 2 */
-
+  user_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -109,6 +111,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    Scheduler_Dispatch();
   }
   /* USER CODE END 3 */
 }
