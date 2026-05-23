@@ -5,7 +5,7 @@
 float g_wt = 0.0f;
 uint8_t g_pll_locked = 0;
 
-static float delay_buf[6] = {0};
+static float delay_buf[5] = {0};
 static uint8_t delay_idx = 0;
 
 static float vq_integ   = 0.0f;
@@ -28,7 +28,7 @@ void Task_PLL_1P_Process(void)
     float v_beta = delay_buf[delay_idx];
 
     delay_buf[delay_idx] = v_alpha;
-    delay_idx = (delay_idx + 1) % 6;
+    delay_idx = (delay_idx + 1) % 5;
 
     float v_mag = sqrtf(v_alpha * v_alpha + v_beta * v_beta);
 

@@ -10,6 +10,7 @@ uint8_t g_fault_code = FAULT_NONE;
 static uint16_t ov_cnt = 0;
 static uint16_t uv_cnt = 0;
 static uint16_t oc_cnt = 0;
+static uint16_t ac_ov_cnt = 0;
 
 void Task_Protect_1P(void)
 {
@@ -38,6 +39,15 @@ void Task_Protect_1P(void)
             g_fault_code = FAULT_OC;
     }
     else oc_cnt = 0;
+
+    float uab_abs = U_line[1];
+    if (uab_abs < 0.0f) uab_abs = -uab_abs;
+    if (uab_abs > Uref * UAC_OV_RATIO)
+    {
+        if (++ac_ov_cnt >= FAULT_DELAY)
+            g_fault_code = FAULT_AC_OV;
+    }
+    else ac_ov_cnt = 0;
 
     if (g_fault_code != FAULT_NONE)
     {

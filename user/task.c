@@ -1,11 +1,11 @@
 #include "task.h"
 
-void Task_Init(Task* t, TaskFunc func, uint32_t period_ms, uint8_t repeat)
+void Task_Init(Task* t, TaskFunc func, uint32_t period_us, uint8_t repeat)
 {
     if (!t) return;
     t->func = func;
-    t->period_ms = (period_ms == 0) ? 1 : period_ms;
-    t->remaining_ms = t->period_ms;
+    t->period_us = (period_us == 0) ? 1 : period_us;
+    t->remaining_us = t->period_us;
     t->repeat = repeat;
     t->enabled = 1;
 }

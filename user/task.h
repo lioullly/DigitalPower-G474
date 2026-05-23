@@ -7,13 +7,13 @@ typedef void (*TaskFunc)(void);
 
 typedef struct {
     TaskFunc func;
-    uint32_t period_ms;
-    uint32_t remaining_ms;
+    uint32_t period_us;
+    uint32_t remaining_us;
     uint8_t repeat;
     uint8_t enabled;
 } Task;
 
-void Task_Init(Task* t, TaskFunc func, uint32_t period_ms, uint8_t repeat);
+void Task_Init(Task* t, TaskFunc func, uint32_t period_us, uint8_t repeat);
 void Task_Enable(Task* t);
 void Task_Disable(Task* t);
 
