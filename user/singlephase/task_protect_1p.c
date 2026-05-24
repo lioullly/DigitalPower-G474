@@ -42,7 +42,7 @@ void Task_Protect_1P(void)
 
     float uab_abs = U_line[1];
     if (uab_abs < 0.0f) uab_abs = -uab_abs;
-    if (uab_abs > Uref * UAC_OV_RATIO)
+    if (uab_abs > UREF * UAC_OV_RATIO)
     {
         if (++ac_ov_cnt >= FAULT_DELAY)
             g_fault_code = FAULT_AC_OV;

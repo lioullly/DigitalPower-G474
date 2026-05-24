@@ -16,10 +16,14 @@
 #define K_CONST			(2.0f*PI*Fsw*L)  //2*PI*Fsw*L
 
 #define UDC_OV   60.0f
-#define UDC_UV    10.0f
+#define UDC_UV    0.0f   // set to 0 when testing bare control board
 #define IL1_OC    5.0f
 
-#define UAC_OV_RATIO  1.5f  // AC overvoltage: |Uab| > Uref * 1.5
+#define UREF            32.0f  // AC output RMS voltage reference (V)
+#define I_MAG_DEFAULT   0.5f   // default current magnitude (A)
+#define I_MAG_MAX       4.0f   // PI output upper clamp (A), must be < IL1_OC
+
+#define UAC_OV_RATIO  1.5f  // AC overvoltage: |Uab| > UREF * 1.5
 #define OFFGRID_MOD_INDEX  0.8f
 
 #endif

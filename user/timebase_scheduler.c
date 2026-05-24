@@ -5,16 +5,21 @@
 static Task tasks[SCHED_MAX_TASKS];
 static uint32_t g_tick_us = 1;
 
-#define TIM6_WRAP  10   // ARR=9 → counter wraps at 10
+#define TIM6_WRAP  100  // ARR=99 → counter wraps at 100
 
 void tim_delay_us(uint32_t us)
 {
     if (us == 0) return;
-    uint32_t start = TIM6->CNT;
-    for (;;) {
-        uint32_t now = TIM6->CNT;
-        uint32_t diff = (now >= start) ? (now - start) : (TIM6_WRAP - start + now);
-        if (diff >= us) break;
+    volatile uint32_t *cnt = &TIM6->CNT;
+    uint32_t ticks = us * 10;
+    uint32_t start = *cnt;
+    uint32_t elapsed = 0;
+    uint32_t prev = start;
+    while (elapsed < ticks) {
+        uint32_t now = *cnt;
+        if (now >= prev) elapsed += now - prev;
+        else elapsed += (TIM6_WRAP - prev) + now;
+        prev = now;
     }
 }
 

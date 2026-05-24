@@ -60,7 +60,10 @@ extern DMA_HandleTypeDef hdma_adc2;
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern ADC_HandleTypeDef hadc4;
+extern TIM_HandleTypeDef htim6;
 /* USER CODE BEGIN EV */
+extern volatile int32_t g_il1, g_il2;
+extern volatile uint8_t g_adc_data_ready;
 void ADC3_4_IRQHandler(void)
 {
     HAL_ADC_IRQHandler(&hadc4);
@@ -91,7 +94,11 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
-
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  while (1) {
+      HAL_GPIO_TogglePin(Red_GPIO_Port, Red_Pin);
+      for (volatile uint32_t i = 0; i < 500000; i++);
+  }
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
   {
@@ -111,6 +118,7 @@ void MemManage_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_MemoryManagement_IRQn 0 */
+    HAL_GPIO_TogglePin(Red_GPIO_Port, Red_Pin); for (volatile uint32_t i=0;i<500000;i++);
     /* USER CODE END W1_MemoryManagement_IRQn 0 */
   }
 }
@@ -194,7 +202,6 @@ void SysTick_Handler(void)
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
-  Scheduler_Tick();
   /* USER CODE END SysTick_IRQn 1 */
 }
 
@@ -225,13 +232,32 @@ void DMA1_Channel1_IRQHandler(void)
 void ADC1_2_IRQHandler(void)
 {
   /* USER CODE BEGIN ADC1_2_IRQn 0 */
-
+  if (ADC1->ISR & ADC_ISR_JEOC) {
+      ADC1->ISR = ~ADC_ISR_JEOC;
+      g_il1 = (int32_t)ADC1->JDR1 - 4096;
+      g_il2 = (int32_t)ADC1->JDR2 - 4096;
+      g_adc_data_ready = 1;
+  }
+  ADC1->ISR = ~(ADC_ISR_JEOS | ADC_ISR_JQOVF);
   /* USER CODE END ADC1_2_IRQn 0 */
-  HAL_ADC_IRQHandler(&hadc1);
   HAL_ADC_IRQHandler(&hadc2);
   /* USER CODE BEGIN ADC1_2_IRQn 1 */
 
   /* USER CODE END ADC1_2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM6 global interrupt, DAC1 and DAC3 channel underrun error interrupts.
+  */
+void TIM6_DAC_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM6_DAC_IRQn 0 */
+  Scheduler_Tick();
+  /* USER CODE END TIM6_DAC_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim6);
+  /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
+
+  /* USER CODE END TIM6_DAC_IRQn 1 */
 }
 
 /**
@@ -249,5 +275,5 @@ void ADC4_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-
+void USART1_IRQHandler(void) { /* silenced - NVIC disabled in MspInit */ }
 /* USER CODE END 1 */

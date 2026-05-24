@@ -7,10 +7,8 @@
 extern PR_TypeDef Current_PR_Loop_alpha;
 extern PI_TypeDef Voltage_PI_Loop;
 
-extern float Uref;
 extern float g_duty_a, g_duty_b, g_duty_c;
-
-static float I_mag = 0.5f;
+extern float I_mag;
 
 void Task_PR_CurrentLoop_1P(void)
 {
@@ -47,6 +45,6 @@ void Task_PI_VoltageLoop_1P(void)
 
     if (U_line[0] < 1.0f) return;
 
-    I_mag = f32_PI_Calculate(&Voltage_PI_Loop, Uref, U_line[0]);
+    I_mag = f32_PI_Calculate(&Voltage_PI_Loop, UREF, U_line[0]);
     if (I_mag < 0.0f) I_mag = 0.0f;
 }

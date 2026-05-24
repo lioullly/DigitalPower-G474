@@ -107,7 +107,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN USART1_MspInit 1 */
-
+  HAL_NVIC_DisableIRQ(USART1_IRQn);  // RX pin float → noise storm on bare board
   /* USER CODE END USART1_MspInit 1 */
   }
 }

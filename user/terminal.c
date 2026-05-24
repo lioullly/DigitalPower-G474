@@ -31,7 +31,7 @@ void Task_Terminal(void)
     printf("--- Voltage (V) ---\r\n");
     printf("Udc:%.1fV  Uab:%.1fV  Uac:%.1fV  Ubc:%.1fV\r\n",
            (double)U_line[0], (double)U_line[1], (double)U_line[2], (double)U_line[3]);
-    printf("Uref:%.1fV\r\n", (double)Uref);
+    printf("Uref:%.1fV\r\n", (double)UREF);
     printf("--- PWM Duty ---\r\n");
     printf("Da:%.3f  Db:%.3f  Dc:%.3f\r\n",
            (double)g_duty_a, (double)g_duty_b, (double)g_duty_c);
