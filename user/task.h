@@ -7,7 +7,7 @@ typedef void (*TaskFunc)(void);
 
 typedef struct {
     TaskFunc func;
-    uint32_t period_us;
+    uint32_t period_us;   // internal, derived from hz
     uint32_t remaining_us;
     uint8_t repeat;
     uint8_t enabled;

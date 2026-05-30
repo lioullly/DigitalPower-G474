@@ -2,19 +2,30 @@
 #include "user_tasks.h"
 #include "task_pwm_1p.h"
 #include "task_protect_1p.h"
+#include "dac.h"
 
 uint8_t Run_Flag = 0;
+PI_TypeDef Voltage_PI_Loop;
+PR_TypeDef Current_PR_Loop_alpha;
+Integral_TypeDef Sine_Phase_Integrator;
 float U_line[4] = {0}, I_line[3] = {0};
 float g_duty_a = 0.5f, g_duty_b = 0.5f, g_duty_c = 0.5f;
-float g_uab_rms = 0.0f, I_mag = I_MAG_DEFAULT;
+float g_uab_rms = 0.0f, I_mag = I_MAG_DEFAULT, g_irms = 0.0f;
 float U_coefficient, current_const, K_coefficient;
 float Iref_alpha = 0.0f, Iref_beta = 0.0f;
 volatile int32_t g_il1, g_il2, g_il3;
 volatile uint8_t g_adc_data_ready;
+float g_dbg_err, g_dbg_vctrl, g_dbg_m;
+volatile float g_sin_wt;
 uint16_t adc2_voltage_buffer[4];
+uint16_t adc1_injected_buffer[2];  // DMA from ADC1: [IL1, IL2]
+static float v_integ = 0.0f;
 
 void user_Init(void)
 {
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
     U_coefficient = VOLTAGE_CONST;
     current_const = CURRENT_CONST;
     K_coefficient = K_CONST;
@@ -31,8 +42,12 @@ void user_Init(void)
 
     HAL_ADCEx_Calibration_Start(&hadc1, ADC_DIFFERENTIAL_ENDED);
     HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
+
     HAL_ADC_Start_DMA(&hadc2, (uint32_t*)adc2_voltage_buffer, 4);
     __HAL_ADC_DISABLE_IT(&hadc2, ADC_IT_EOC);
+    HAL_NVIC_DisableIRQ(DMA1_Channel1_IRQn);  // DMA in background, no ISR needed
+
+    HAL_HRTIM_ADCPostScalerConfig(&hhrtim1, HRTIM_ADCTRIGGER_2, 4);  // 50kHz/5=10kHz ADC
     HAL_ADCEx_InjectedStart_IT(&hadc1);
     // ADC4 disabled - kills scheduler on bare board
 
@@ -45,39 +60,78 @@ void user_Init(void)
     HAL_GPIO_WritePin(Green_GPIO_Port, Green_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(Red_GPIO_Port,   Red_Pin,   GPIO_PIN_RESET);
 
-    HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 8, 0);
-    HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
-    HAL_TIM_Base_Start_IT(&htim6);
+    HAL_NVIC_SetPriority(HRTIM1_Master_IRQn, 7, 0);
+    HAL_NVIC_EnableIRQ(HRTIM1_Master_IRQn);
+
+    HAL_NVIC_SetPriority(USART1_IRQn, 8, 0);  // lower than HRTIM(7), don't preempt PWM
+    HAL_NVIC_EnableIRQ(USART1_IRQn);
+    __HAL_UART_DISABLE_IT(&huart1, UART_IT_RXNE);  // RX floating → noise storm
+
+    HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
+
+    f32_PR_Init(&Current_PR_Loop_alpha, 0.5f, 50.0f, 50.0f, 10.0f, 10000.0f, 25.0f, -25.0f);
+    f32_PI_Init(&Voltage_PI_Loop, 1.0f/10000.0f, 0.25f, 12.0f, (int16_t)I_MAG_MAX, 0);
+    f32_Integral_Init(&Sine_Phase_Integrator, 1.0f/10000.0f, 1.0f);
+    Sine_Phase_Integrator.x1 = 50.0f;  // pre-charge, avoid half-step on first call
+
+    HAL_HRTIM_WaveformCounterStart(&hhrtim1, HRTIM_TIMERID_MASTER);
+    HRTIM1->sMasterRegs.MDIER |= HRTIM_MDIER_MCMP1IE;  // re-apply after CubeMX clobber
 
     UserTasks_Init();
 }
 
-#define CTRL_FREQ 10000
-#define WT_PERIOD (CTRL_FREQ / 50)
-#define SOFTSTART_STEPS (CTRL_FREQ * 3 / 10)
-static uint32_t wt_counter = 0;
-static uint16_t ramp_cnt = 0;
+void Task_ADC_Fetch(void)
+{
+    if (!g_adc_data_ready) return;
+    g_adc_data_ready = 0;
+    I_line[0] = (float)g_il1 * current_const;
+    U_line[0] = (float)(adc2_voltage_buffer[0] - 2036) * UAB_VOLTAGE_CONST;//UAB
+    U_line[1] = (float)(adc2_voltage_buffer[1] - 0) * VOLTAGE_CONST;  //UDC
+
+    static float uab_buf[200], il1_buf[200];
+    static uint16_t idx = 0;
+    uab_buf[idx] = U_line[0];
+    il1_buf[idx] = I_line[0];
+    if (++idx >= 200) {
+        idx = 0;
+        arm_rms_f32(uab_buf, 200, &g_uab_rms);
+        arm_rms_f32(il1_buf, 200, &g_irms);
+    }
+}
 
 void Task_Control_Debug(void)
 {
-    if (!Run_Flag) { ramp_cnt = 0; return; }
+    if (!Run_Flag) return;
     HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_SET);
-    if (!g_adc_data_ready) return;
-    g_adc_data_ready = 0;
 
-    I_line[0] = (float)g_il1 * current_const;
-    I_line[1] = (float)g_il2 * current_const;
-    U_line[0] = (float)(adc2_voltage_buffer[0] - 2048) * U_coefficient;
-    U_line[1] = (float)(adc2_voltage_buffer[1] - 2048) * U_coefficient;
+    static float i_mag = I_MAG_DEFAULT;
+    static uint16_t v_dec = 0;
+    if (++v_dec >= 200) {  // slow voltage loop, every 20ms
+        v_dec = 0;
+        float v_err = UREF - g_uab_rms;
+        i_mag += 0.02f * v_err;
+        if (i_mag > I_MAG_MAX) i_mag = I_MAG_MAX;
+        if (i_mag < 0.05f)   i_mag = 0.05f;
+    }
+    float i_ref = i_mag * 1.414214f * g_sin_wt;  // RMS→peak
+    float i_fb  = -I_line[0];
+    float i_err = i_ref - i_fb;
+    float v_ctrl = f32_PR_Calculate(&Current_PR_Loop_alpha, i_err);
+    static float uab_filt = 0.0f;
+    uab_filt += 0.1f * (U_line[0] - uab_filt);  // ~160Hz LPF
+    float v_ref = v_ctrl + uab_filt;
+    float v_err = i_err;
+    float udc   = U_line[1];
+    if (udc < 1.0f) udc = 1.0f;
+    float m = v_ref / udc;
 
-    if (ramp_cnt < SOFTSTART_STEPS) ramp_cnt++;
-    float mod = OFFGRID_MOD_INDEX * (float)ramp_cnt / (float)SOFTSTART_STEPS;
-    float wt = (float)wt_counter / (float)WT_PERIOD;
-    if (++wt_counter >= WT_PERIOD) wt_counter = 0;
-    float sin_wt = arm_sin_f32(wt * 2.0f * PI);
+    g_dbg_err   = v_err;
+    g_dbg_vctrl = v_ctrl;
+    g_dbg_m     = m;
 
-    g_duty_a = 0.5f + 0.5f * mod * sin_wt;
-    g_duty_b = 0.5f - 0.5f * mod * sin_wt;
+    g_duty_a = 0.5f + 0.5f * m;
+    g_duty_b = 0.5f - 0.5f * m;
+
     if (g_duty_a > 0.95f) g_duty_a = 0.95f;
     if (g_duty_b > 0.95f) g_duty_b = 0.95f;
     if (g_duty_a < 0.05f) g_duty_a = 0.05f;
@@ -86,20 +140,10 @@ void Task_Control_Debug(void)
     Task_PWM_1P_Update();
 }
 
-// Lightweight ADC callback - only raw reads, no float math
-void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
-    if (hadc->Instance != ADC1) return;
-    g_il1 = (int32_t)HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_1) - 4096;
-    g_il2 = (int32_t)HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_2) - 4096;
-    g_adc_data_ready = 1;
-}
-
-void user_Loop(void) {}
 
 void Task_Button_Scan(void)
 {
-    static uint8_t last_Run_Flag = 0xFF, last_user = 1, hb = 0;
+    static uint8_t last_Run_Flag = 0xFF, last_user = 1;
     HAL_GPIO_TogglePin(Green_GPIO_Port, Green_Pin);  // 50Hz heartbeat
 
     if (last_Run_Flag == 0xFF) last_user = HAL_GPIO_ReadPin(user_GPIO_Port, user_Pin);
@@ -110,8 +154,9 @@ void Task_Button_Scan(void)
     if (Run_Flag != last_Run_Flag) {
         last_Run_Flag = Run_Flag;
         if (Run_Flag) {
+            f32_PR_Init(&Current_PR_Loop_alpha, 2.0f, 20.0f, 50.0f, 10.0f, 10000.0f, 25.0f, -25.0f);
+            v_integ = 0.0f;  // not accessible here!
             HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
-            HAL_HRTIM_WaveformCounterStart(&hhrtim1, HRTIM_TIMERID_MASTER);
             HAL_HRTIM_WaveformOutputStart(&hhrtim1,
                 HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
                 HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2 |
@@ -125,8 +170,21 @@ void Task_Button_Scan(void)
                 HRTIM_OUTPUT_TF1 | HRTIM_OUTPUT_TF2);
             HAL_HRTIM_WaveformCounterStop(&hhrtim1,
                 HRTIM_TIMERID_TIMER_A | HRTIM_TIMERID_TIMER_B | HRTIM_TIMERID_TIMER_F);
-            HAL_HRTIM_WaveformCounterStop(&hhrtim1, HRTIM_TIMERID_MASTER);
             HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_RESET);
         }
     }
 }
+
+// ADC ISR — phase accumulator + DAC locked to 10kHz ADC trigger
+void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+    if (hadc->Instance != ADC1) return;
+    g_il1 = (int32_t)HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_1) - 2050;
+
+    g_wt = f32_Integral_Calculate(&Sine_Phase_Integrator, 50.0f);
+    g_sin_wt = arm_sin_f32(g_wt * 2.0f * PI);
+    HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, (uint32_t)(g_sin_wt * 2047 + 2048));
+
+    g_adc_data_ready = 1;
+}
+

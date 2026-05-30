@@ -1,26 +1,16 @@
 #include "timebase_scheduler.h"
 #include <string.h>
-#include "main.h"   // for TIM6
+#include "main.h"
 
 static Task tasks[SCHED_MAX_TASKS];
 static uint32_t g_tick_us = 1;
 
-#define TIM6_WRAP  100  // ARR=99 → counter wraps at 100
-
 void tim_delay_us(uint32_t us)
 {
     if (us == 0) return;
-    volatile uint32_t *cnt = &TIM6->CNT;
-    uint32_t ticks = us * 10;
-    uint32_t start = *cnt;
-    uint32_t elapsed = 0;
-    uint32_t prev = start;
-    while (elapsed < ticks) {
-        uint32_t now = *cnt;
-        if (now >= prev) elapsed += now - prev;
-        else elapsed += (TIM6_WRAP - prev) + now;
-        prev = now;
-    }
+    uint32_t start = DWT->CYCCNT;
+    uint32_t ticks = us * (SystemCoreClock / 1000000U);
+    while ((DWT->CYCCNT - start) < ticks);
 }
 
 void Scheduler_Init(uint32_t tick_us)
@@ -29,13 +19,15 @@ void Scheduler_Init(uint32_t tick_us)
     memset(tasks, 0, sizeof(tasks));
 }
 
-int Scheduler_AddTask(TaskFunc func, uint32_t period_us, uint8_t repeat)
+int Scheduler_AddTask(TaskFunc func, uint32_t hz, uint8_t repeat)
 {
+    uint32_t period_us = (hz > 0) ? (1000000U / hz) : g_tick_us;
+    if (period_us < g_tick_us) period_us = g_tick_us;
     for (int i = 0; i < SCHED_MAX_TASKS; i++) {
         if (tasks[i].func == 0) {
             tasks[i].func = func;
-            tasks[i].period_us = (period_us == 0) ? g_tick_us : period_us;
-            tasks[i].remaining_us = tasks[i].period_us;
+            tasks[i].period_us = period_us;
+            tasks[i].remaining_us = period_us;
             tasks[i].repeat = repeat;
             tasks[i].enabled = 1;
             return i;

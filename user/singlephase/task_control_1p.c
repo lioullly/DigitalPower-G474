@@ -8,22 +8,22 @@ extern PR_TypeDef Current_PR_Loop_alpha;
 extern PI_TypeDef Voltage_PI_Loop;
 
 extern float g_duty_a, g_duty_b, g_duty_c;
-extern float I_mag;
 
 void Task_PR_CurrentLoop_1P(void)
 {
     if (!Run_Flag) return;
 
-    float cos_wt = arm_cos_f32(g_wt * 2.0f * PI);
-    float i_ref = I_mag * cos_wt;
-
-    float err = i_ref - I_line[0];
+    float i_ref = I_mag * 1.414214f * g_sin_wt;  // RMS→peak, use g_sin_wt
+    float i_fb  = -I_line[0];                     // sensor inverted
+    float err   = i_ref - i_fb;
 
     float v_ctrl = f32_PR_Calculate(&Current_PR_Loop_alpha, err);
 
-    float v_ref = v_ctrl + U_line[1];
+    static float uab_filt = 0.0f;
+    uab_filt += 0.1f * (U_line[0] - uab_filt);  // ~160Hz LPF
+    float v_ref = v_ctrl + uab_filt;              // Uab feedforward
 
-    float udc = U_line[0];
+    float udc = U_line[1];
     if (udc < 1.0f) udc = 1.0f;
 
     float m = v_ref / udc;
@@ -43,8 +43,8 @@ void Task_PI_VoltageLoop_1P(void)
 {
     if (!Run_Flag) return;
 
-    if (U_line[0] < 1.0f) return;
+    if (g_uab_rms < 1.0f) return;
 
-    I_mag = f32_PI_Calculate(&Voltage_PI_Loop, UREF, U_line[0]);
+    I_mag = f32_PI_Calculate(&Voltage_PI_Loop, UREF, g_uab_rms);
     if (I_mag < 0.0f) I_mag = 0.0f;
 }

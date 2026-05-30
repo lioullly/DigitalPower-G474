@@ -9,7 +9,7 @@
 #endif
 
 void Scheduler_Init(uint32_t tick_us);
-int  Scheduler_AddTask(TaskFunc func, uint32_t period_us, uint8_t repeat);
+int  Scheduler_AddTask(TaskFunc func, uint32_t hz, uint8_t repeat);
 void Scheduler_RemoveTask(int id);
 void Scheduler_Tick(void);
 void Scheduler_Dispatch(void);
