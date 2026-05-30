@@ -23,7 +23,7 @@ static uint16_t lock_cnt = 0;
 
 void Task_PLL_1P_Process(void)
 {
-    float v_alpha = U_line[1];
+    float v_alpha = U_line[0];  // Uab, not Udc
 
     float v_beta = delay_buf[delay_idx];
 

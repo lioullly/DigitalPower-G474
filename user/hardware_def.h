@@ -19,7 +19,7 @@
 #define UDC_UV    0.0f
 #define IL1_OC    5.0f
 
-#define UREF            15.0f  // AC output RMS voltage reference (V)
+#define UREF            40.0f  // PFC bus voltage reference (V)
 #define I_MAG_DEFAULT   1.0f   // default current magnitude (A)
 #define I_MAG_MAX       5.0f   // PI output upper clamp (A), must be < IL1_OC
 

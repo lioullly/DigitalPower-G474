@@ -69,7 +69,7 @@ void user_Init(void)
 
     HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
 
-    f32_PR_Init(&Current_PR_Loop_alpha, 0.5f, 50.0f, 50.0f, 10.0f, 10000.0f, 25.0f, -25.0f);
+    f32_PR_Init(&Current_PR_Loop_alpha, 0.5f, 50.0f, 50.0f, 10.0f, 10000.0f, 40.0f, -40.0f);
     f32_PI_Init(&Voltage_PI_Loop, 1.0f/10000.0f, 0.25f, 12.0f, (int16_t)I_MAG_MAX, 0);
     f32_Integral_Init(&Sine_Phase_Integrator, 1.0f/10000.0f, 1.0f);
     Sine_Phase_Integrator.x1 = 50.0f;  // pre-charge, avoid half-step on first call
