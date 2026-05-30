@@ -13,7 +13,6 @@
 void user_Init(void);
 void user_Loop(void);
 void Task_ADC_Fetch(void);
-void Task_Control_Debug(void);
 void Task_Button_Scan(void);
 
 extern uint8_t Run_Flag;

@@ -99,48 +99,6 @@ void Task_ADC_Fetch(void)
     }
 }
 
-void Task_Control_Debug(void)
-{
-    if (!Run_Flag) return;
-    HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_SET);
-
-    static float i_mag = I_MAG_DEFAULT;
-    static uint16_t v_dec = 0;
-    if (++v_dec >= 200) {  // slow voltage loop, every 20ms
-        v_dec = 0;
-        float v_err = UREF - g_uab_rms;
-        i_mag += 0.02f * v_err;
-        if (i_mag > I_MAG_MAX) i_mag = I_MAG_MAX;
-        if (i_mag < 0.05f)   i_mag = 0.05f;
-    }
-    float i_ref = i_mag * 1.414214f * g_sin_wt;  // RMS→peak
-    float i_fb  = -I_line[0];
-    float i_err = i_ref - i_fb;
-    float v_ctrl = f32_PR_Calculate(&Current_PR_Loop_alpha, i_err);
-    static float uab_filt = 0.0f;
-    uab_filt += 0.1f * (U_line[0] - uab_filt);  // ~160Hz LPF
-    float v_ref = v_ctrl + uab_filt;
-    float v_err = i_err;
-    float udc   = U_line[1];
-    if (udc < 1.0f) udc = 1.0f;
-    float m = v_ref / udc;
-
-    g_dbg_err   = v_err;
-    g_dbg_vctrl = v_ctrl;
-    g_dbg_m     = m;
-
-    g_duty_a = 0.5f + 0.5f * m;
-    g_duty_b = 0.5f - 0.5f * m;
-
-    if (g_duty_a > 0.95f) g_duty_a = 0.95f;
-    if (g_duty_b > 0.95f) g_duty_b = 0.95f;
-    if (g_duty_a < 0.05f) g_duty_a = 0.05f;
-    if (g_duty_b < 0.05f) g_duty_b = 0.05f;
-    g_duty_c = 0.5f;
-    Task_PWM_1P_Update();
-}
-
-
 void Task_Button_Scan(void)
 {
     static uint8_t last_Run_Flag = 0xFF, last_user = 1;

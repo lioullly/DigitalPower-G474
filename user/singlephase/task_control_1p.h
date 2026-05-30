@@ -3,7 +3,6 @@
 
 #include "main.h"
 
-void Task_PR_CurrentLoop_1P(void);
-void Task_PI_VoltageLoop_1P(void);
+void Task_Control_PI_PR_Loop(void);
 
 #endif
