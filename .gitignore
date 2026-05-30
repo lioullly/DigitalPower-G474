@@ -17,6 +17,9 @@ MDK-ARM/*.uvprojx.lnk
 .mxproject
 *.lnk
 
+# Claude memory
+memory/
+
 # OS
 Thumbs.db
 Desktop.ini
