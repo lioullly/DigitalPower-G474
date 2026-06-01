@@ -12,7 +12,6 @@
 
 void user_Init(void);
 void user_Loop(void);
-void Task_ADC_Fetch(void);
 void Task_Button_Scan(void);
 
 extern uint8_t Run_Flag;
@@ -26,7 +25,9 @@ extern volatile int32_t g_il1, g_il2, g_il3;
 extern volatile uint8_t g_adc_data_ready;
 extern uint16_t adc2_voltage_buffer[4];
 extern uint16_t adc1_injected_buffer[2];
+extern Integral_TypeDef Sine_Phase_Integrator;
 extern DMA_HandleTypeDef hdma_adc1;
+extern DMA_HandleTypeDef hdma_usart1_tx;
 extern float g_dbg_err, g_dbg_vctrl, g_dbg_m;
 
 #endif

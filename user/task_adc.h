@@ -3,6 +3,7 @@
 
 #include "main.h"
 
-void Task_ADC_Process(void);
+void Task_ADC_Init(void);
+void Task_ADC_Fetch(void);
 
 #endif

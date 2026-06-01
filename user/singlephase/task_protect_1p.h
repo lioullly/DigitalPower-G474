@@ -7,7 +7,6 @@
 #define FAULT_OV    1
 #define FAULT_UV    2
 #define FAULT_OC    3
-#define FAULT_AC_OV 4
 
 void Task_Protect_1P(void);
 

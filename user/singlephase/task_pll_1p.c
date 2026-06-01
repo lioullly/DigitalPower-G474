@@ -13,8 +13,8 @@ float g_freq_est = 50.0f;
 static float wt_accum   = 0.0f;
 static uint16_t lock_cnt = 0;
 
-#define PLL_Kp   60.0f
-#define PLL_Ki   2.0f
+#define PLL_Kp    5.0f
+#define PLL_Ki   50.0f
 #define PLL_Ts   0.001f
 #define LOCK_CNT 200
 

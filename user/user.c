@@ -1,8 +1,8 @@
 #include "user.h"
 #include "user_tasks.h"
+#include "task_adc.h"
 #include "task_pwm_1p.h"
 #include "task_protect_1p.h"
-#include "dac.h"
 
 uint8_t Run_Flag = 0;
 PI_TypeDef Voltage_PI_Loop;
@@ -19,7 +19,6 @@ float g_dbg_err, g_dbg_vctrl, g_dbg_m;
 volatile float g_sin_wt;
 uint16_t adc2_voltage_buffer[4];
 uint16_t adc1_injected_buffer[2];  // DMA from ADC1: [IL1, IL2]
-static float v_integ = 0.0f;
 
 void user_Init(void)
 {
@@ -40,16 +39,7 @@ void user_Init(void)
         }
     }
 
-    HAL_ADCEx_Calibration_Start(&hadc1, ADC_DIFFERENTIAL_ENDED);
-    HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
-
-    HAL_ADC_Start_DMA(&hadc2, (uint32_t*)adc2_voltage_buffer, 4);
-    __HAL_ADC_DISABLE_IT(&hadc2, ADC_IT_EOC);
-    HAL_NVIC_DisableIRQ(DMA1_Channel1_IRQn);  // DMA in background, no ISR needed
-
-    HAL_HRTIM_ADCPostScalerConfig(&hhrtim1, HRTIM_ADCTRIGGER_2, 4);  // 50kHz/5=10kHz ADC
-    HAL_ADCEx_InjectedStart_IT(&hadc1);
-    // ADC4 disabled - kills scheduler on bare board
+    Task_ADC_Init();  // ADC calibration, DMA, injected start, DAC, integrator
 
     GPIO_InitTypeDef btn = {0};
     btn.Pin  = user_Pin;
@@ -67,36 +57,16 @@ void user_Init(void)
     HAL_NVIC_EnableIRQ(USART1_IRQn);
     __HAL_UART_DISABLE_IT(&huart1, UART_IT_RXNE);  // RX floating → noise storm
 
-    HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
-
-    f32_PR_Init(&Current_PR_Loop_alpha, 0.5f, 50.0f, 50.0f, 10.0f, 10000.0f, 40.0f, -40.0f);
-    f32_PI_Init(&Voltage_PI_Loop, 1.0f/10000.0f, 0.25f, 12.0f, (int16_t)I_MAG_MAX, 0);
-    f32_Integral_Init(&Sine_Phase_Integrator, 1.0f/10000.0f, 1.0f);
-    Sine_Phase_Integrator.x1 = 50.0f;  // pre-charge, avoid half-step on first call
+    // Switch USART1 TX DMA from circular to normal for ping-pong VOFA
+    HAL_DMA_DeInit(&hdma_usart1_tx);
+    hdma_usart1_tx.Init.Mode = DMA_NORMAL;
+    HAL_DMA_Init(&hdma_usart1_tx);
+    __HAL_LINKDMA(&huart1, hdmatx, hdma_usart1_tx);
 
     HAL_HRTIM_WaveformCounterStart(&hhrtim1, HRTIM_TIMERID_MASTER);
     HRTIM1->sMasterRegs.MDIER |= HRTIM_MDIER_MCMP1IE;  // re-apply after CubeMX clobber
 
     UserTasks_Init();
-}
-
-void Task_ADC_Fetch(void)
-{
-    if (!g_adc_data_ready) return;
-    g_adc_data_ready = 0;
-    I_line[0] = (float)g_il1 * current_const;
-    U_line[0] = (float)(adc2_voltage_buffer[0] - 2036) * UAB_VOLTAGE_CONST;//UAB
-    U_line[1] = (float)(adc2_voltage_buffer[1] - 0) * VOLTAGE_CONST;  //UDC
-
-    static float uab_buf[200], il1_buf[200];
-    static uint16_t idx = 0;
-    uab_buf[idx] = U_line[0];
-    il1_buf[idx] = I_line[0];
-    if (++idx >= 200) {
-        idx = 0;
-        arm_rms_f32(uab_buf, 200, &g_uab_rms);
-        arm_rms_f32(il1_buf, 200, &g_irms);
-    }
 }
 
 void Task_Button_Scan(void)
@@ -111,17 +81,7 @@ void Task_Button_Scan(void)
 
     if (Run_Flag != last_Run_Flag) {
         last_Run_Flag = Run_Flag;
-        if (Run_Flag) {
-            f32_PR_Init(&Current_PR_Loop_alpha, 2.0f, 20.0f, 50.0f, 10.0f, 10000.0f, 25.0f, -25.0f);
-            v_integ = 0.0f;  // not accessible here!
-            HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
-            HAL_HRTIM_WaveformOutputStart(&hhrtim1,
-                HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
-                HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2 |
-                HRTIM_OUTPUT_TF1 | HRTIM_OUTPUT_TF2);
-            HAL_HRTIM_WaveformCounterStart(&hhrtim1,
-                HRTIM_TIMERID_TIMER_A | HRTIM_TIMERID_TIMER_B | HRTIM_TIMERID_TIMER_F);
-        } else {
+        if (!Run_Flag) {
             HAL_HRTIM_WaveformOutputStop(&hhrtim1,
                 HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
                 HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2 |
@@ -132,17 +92,3 @@ void Task_Button_Scan(void)
         }
     }
 }
-
-// ADC ISR — phase accumulator + DAC locked to 10kHz ADC trigger
-void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
-    if (hadc->Instance != ADC1) return;
-    g_il1 = (int32_t)HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_1) - 2050;
-
-    g_wt = f32_Integral_Calculate(&Sine_Phase_Integrator, 50.0f);
-    g_sin_wt = arm_sin_f32(g_wt * 2.0f * PI);
-    HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, (uint32_t)(g_sin_wt * 2047 + 2048));
-
-    g_adc_data_ready = 1;
-}
-

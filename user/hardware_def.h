@@ -15,15 +15,16 @@
 #define	Fsw				(50.0f)
 #define K_CONST			(2.0f*PI*Fsw*L) 
 
-#define UDC_OV   60.0f
-#define UDC_UV    0.0f
-#define IL1_OC    5.0f
+// --- DC bus protection ---
+#define DC_OV    80.0f   // DC bus overvoltage threshold (V)
+#define DC_UV     0.0f   // DC bus undervoltage threshold (V)
+
+// --- current protection ---
+#define IL1_OC_RMS  5.0f   // overcurrent RMS threshold (A)
 
 #define UREF            40.0f  // PFC bus voltage reference (V)
 #define I_MAG_DEFAULT   1.0f   // default current magnitude (A)
-#define I_MAG_MAX       5.0f   // PI output upper clamp (A), must be < IL1_OC
-
-#define UAC_OV_RATIO  1.6f  // AC overvoltage: |Uab| > UREF * 1.5
+#define I_MAG_MAX       10.0f   // PI output upper clamp (A), must be < IL1_OC
 #define OFFGRID_MOD_INDEX  0.5f
 
 #endif

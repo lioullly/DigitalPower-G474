@@ -2,7 +2,16 @@
 #define TIMEBASE_SCHEDULER_H
 
 #include <stdint.h>
-#include "task.h"
+
+typedef void (*TaskFunc)(void);
+
+typedef struct {
+    TaskFunc func;
+    uint32_t period_us;   // derived from hz by Scheduler_AddTask
+    uint32_t remaining_us;
+    uint8_t repeat;
+    uint8_t enabled;
+} Task;
 
 #ifndef SCHED_MAX_TASKS
 #define SCHED_MAX_TASKS 16
