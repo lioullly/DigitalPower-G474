@@ -27,9 +27,7 @@
 ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 ADC_HandleTypeDef hadc4;
-DMA_HandleTypeDef hdma_adc1;
 DMA_HandleTypeDef hdma_adc2;
-DMA_HandleTypeDef hdma_adc4;
 
 /* ADC1 init function */
 void MX_ADC1_Init(void)
@@ -84,7 +82,7 @@ void MX_ADC1_Init(void)
   sConfigInjected.InjectedOffsetNumber = ADC_OFFSET_NONE;
   sConfigInjected.InjectedOffset = 0;
   sConfigInjected.InjectedNbrOfConversion = 2;
-  sConfigInjected.InjectedDiscontinuousConvMode = ENABLE;
+  sConfigInjected.InjectedDiscontinuousConvMode = DISABLE;
   sConfigInjected.AutoInjectedConv = DISABLE;
   sConfigInjected.QueueInjectedContext = DISABLE;
   sConfigInjected.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJEC_HRTIM_TRG2;
@@ -296,24 +294,6 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /* ADC1 DMA Init */
-    /* ADC1 Init */
-    hdma_adc1.Instance = DMA1_Channel2;
-    hdma_adc1.Init.Request = DMA_REQUEST_ADC1;
-    hdma_adc1.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    hdma_adc1.Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_adc1.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_adc1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    hdma_adc1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-    hdma_adc1.Init.Mode = DMA_CIRCULAR;
-    hdma_adc1.Init.Priority = DMA_PRIORITY_HIGH;
-    if (HAL_DMA_Init(&hdma_adc1) != HAL_OK)
-    {
-      Error_Handler();
-    }
-
-    __HAL_LINKDMA(adcHandle,DMA_Handle,hdma_adc1);
-
     /* ADC1 interrupt Init */
     HAL_NVIC_SetPriority(ADC1_2_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
@@ -407,24 +387,6 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    /* ADC4 DMA Init */
-    /* ADC4 Init */
-    hdma_adc4.Instance = DMA1_Channel3;
-    hdma_adc4.Init.Request = DMA_REQUEST_ADC4;
-    hdma_adc4.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    hdma_adc4.Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_adc4.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_adc4.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    hdma_adc4.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-    hdma_adc4.Init.Mode = DMA_CIRCULAR;
-    hdma_adc4.Init.Priority = DMA_PRIORITY_MEDIUM;
-    if (HAL_DMA_Init(&hdma_adc4) != HAL_OK)
-    {
-      Error_Handler();
-    }
-
-    __HAL_LINKDMA(adcHandle,DMA_Handle,hdma_adc4);
-
     /* ADC4 interrupt Init */
     HAL_NVIC_SetPriority(ADC4_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(ADC4_IRQn);
@@ -457,9 +419,6 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
     HAL_GPIO_DeInit(GPIOC, il1_p_Pin|il1_n_Pin);
 
     HAL_GPIO_DeInit(GPIOA, il2_p_Pin|il2_n_Pin);
-
-    /* ADC1 DMA DeInit */
-    HAL_DMA_DeInit(adcHandle->DMA_Handle);
 
     /* ADC1 interrupt Deinit */
   /* USER CODE BEGIN ADC1:ADC1_2_IRQn disable */
@@ -522,9 +481,6 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
     PB15     ------> ADC4_IN5
     */
     HAL_GPIO_DeInit(GPIOB, il3_p_Pin|il3_n_Pin);
-
-    /* ADC4 DMA DeInit */
-    HAL_DMA_DeInit(adcHandle->DMA_Handle);
 
     /* ADC4 interrupt Deinit */
     HAL_NVIC_DisableIRQ(ADC4_IRQn);

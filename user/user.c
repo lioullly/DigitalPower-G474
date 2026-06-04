@@ -5,6 +5,7 @@
 #include "task_protect_1p.h"
 
 uint8_t Run_Flag = 0;
+uint8_t g_grid_mode = 0;  // 0=off-grid, 1=grid-tied
 PI_TypeDef Voltage_PI_Loop;
 PR_TypeDef Current_PR_Loop_alpha;
 Integral_TypeDef Sine_Phase_Integrator;
@@ -41,6 +42,8 @@ void user_Init(void)
 
     Task_ADC_Init();  // ADC calibration, DMA, injected start, DAC, integrator
 
+    f32_PI_Init(&Voltage_PI_Loop, 0.02f, 0.25f, 12.0f, (int16_t)I_MAG_MAX, 0);
+
     GPIO_InitTypeDef btn = {0};
     btn.Pin  = user_Pin;
     btn.Mode = GPIO_MODE_INPUT;
@@ -53,9 +56,7 @@ void user_Init(void)
     HAL_NVIC_SetPriority(HRTIM1_Master_IRQn, 7, 0);
     HAL_NVIC_EnableIRQ(HRTIM1_Master_IRQn);
 
-    HAL_NVIC_SetPriority(USART1_IRQn, 8, 0);  // lower than HRTIM(7), don't preempt PWM
-    HAL_NVIC_EnableIRQ(USART1_IRQn);
-    __HAL_UART_DISABLE_IT(&huart1, UART_IT_RXNE);  // RX floating → noise storm
+    __HAL_UART_DISABLE_IT(&huart1, UART_IT_RXNE);  // RX not used, keep USART1 IRQ for TX TC chain
 
     // Switch USART1 TX DMA from circular to normal for ping-pong VOFA
     HAL_DMA_DeInit(&hdma_usart1_tx);
@@ -82,12 +83,7 @@ void Task_Button_Scan(void)
     if (Run_Flag != last_Run_Flag) {
         last_Run_Flag = Run_Flag;
         if (!Run_Flag) {
-            HAL_HRTIM_WaveformOutputStop(&hhrtim1,
-                HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
-                HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2 |
-                HRTIM_OUTPUT_TF1 | HRTIM_OUTPUT_TF2);
-            HAL_HRTIM_WaveformCounterStop(&hhrtim1,
-                HRTIM_TIMERID_TIMER_A | HRTIM_TIMERID_TIMER_B | HRTIM_TIMERID_TIMER_F);
+            // HRTIM handled by state machine — Button_Scan only toggles Run_Flag
             HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_RESET);
         }
     }

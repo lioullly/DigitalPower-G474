@@ -6,6 +6,7 @@
 
 extern float g_freq_est;
 extern uint8_t g_fault_code;
+extern uint8_t g_pll_locked;
 
 static uint8_t vofa_ping[64];    // ping-pong buffer A
 static uint8_t vofa_pong[64];    // ping-pong buffer B
@@ -38,23 +39,24 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 // JustFloat binary: 10 floats + 4-byte tail (0x00 0x00 0x80 0x7F)
 void Task_VOFA_1P(void)
 {
-    float data[10];
-    data[0] = I_line[0];      // Ch0: instantaneous I
+    float data[12];
+    data[0] = -I_line[0];      // Ch0: instantaneous I
     data[1] = g_uab_rms;      // Ch1: Urms
     data[2] = g_irms;         // Ch2: Irms
     data[3] = (float)g_il1;   // Ch3: IL1 raw
-    data[4] = (float)I_mag;   // Ch4: current reference mag
+    data[4] = g_dbg_m;        // Ch4: duty_a (via g_dbg_m)
     data[5] = (float)adc2_voltage_buffer[1];  // Ch5: Udc raw
     data[6] = U_line[0];      // Ch6: Uab instantaneous
     data[7] = (float)g_fault_code;            // Ch7: fault code
     data[8] = g_wt;           // Ch8: PLL phase [0,1)
-    data[9] = g_freq_est;     // Ch9: PLL frequency (Hz)
-
-    uint8_t frame[44];
-    memcpy(frame, data, 40);
-    frame[40] = 0x00; frame[41] = 0x00;
-    frame[42] = 0x80; frame[43] = 0x7F;
-    vofa_send(frame, 44);
+    data[9] = g_freq_est;     // Ch9: PLL frequency
+    data[10] = (float)g_pll_locked; // Ch10: grid_mode  
+    data[11] = (float)I_mag;  // Ch11: PI output (current mag ref)
+    uint8_t frame[52];
+    memcpy(frame, data, 48);
+    frame[48] = 0x00; frame[49] = 0x00;
+    frame[50] = 0x80; frame[51] = 0x7F;
+    vofa_send(frame, 52);
 }
 
 void Task_VOFA_3P(void)

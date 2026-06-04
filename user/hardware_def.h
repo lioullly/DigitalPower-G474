@@ -22,7 +22,7 @@
 // --- current protection ---
 #define IL1_OC_RMS  5.0f   // overcurrent RMS threshold (A)
 
-#define UREF            40.0f  // PFC bus voltage reference (V)
+#define UREF            10.0f  // PFC bus voltage reference (V)
 #define I_MAG_DEFAULT   1.0f   // default current magnitude (A)
 #define I_MAG_MAX       10.0f   // PI output upper clamp (A), must be < IL1_OC
 #define OFFGRID_MOD_INDEX  0.5f

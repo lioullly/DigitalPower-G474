@@ -32,8 +32,8 @@ void Task_ADC_Fetch(void)
     g_adc_data_ready = 0;
 
     I_line[0] = (float)g_il1 * current_const;
-    U_line[0] = (float)(adc2_voltage_buffer[0] - 2036) * UAB_VOLTAGE_CONST;  // Uab
-    U_line[1] = (float)(adc2_voltage_buffer[1] - 0) * VOLTAGE_CONST;         // Udc
+    U_line[0] = (float)(adc2_voltage_buffer[0] - 2036) * UAB_VOLTAGE_CONST;  // PA0 = Uab
+    U_line[1] = (float)(adc2_voltage_buffer[1] - 0) * VOLTAGE_CONST;         // PA1 = Udc
 
     static float uab_buf[200], il1_buf[200];
     static uint16_t idx = 0;

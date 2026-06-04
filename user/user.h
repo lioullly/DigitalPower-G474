@@ -15,6 +15,9 @@ void user_Loop(void);
 void Task_Button_Scan(void);
 
 extern uint8_t Run_Flag;
+extern uint8_t g_grid_mode;
+extern PI_TypeDef Voltage_PI_Loop;
+extern PR_TypeDef Current_PR_Loop_alpha;
 extern float U_line[4], I_line[3];
 extern float g_wt;
 extern volatile float g_sin_wt;
@@ -25,6 +28,8 @@ extern volatile int32_t g_il1, g_il2, g_il3;
 extern volatile uint8_t g_adc_data_ready;
 extern uint16_t adc2_voltage_buffer[4];
 extern uint16_t adc1_injected_buffer[2];
+extern int32_t i1_ofs, i2_ofs;
+extern uint16_t v0_ofs, v1_ofs;
 extern Integral_TypeDef Sine_Phase_Integrator;
 extern DMA_HandleTypeDef hdma_adc1;
 extern DMA_HandleTypeDef hdma_usart1_tx;
