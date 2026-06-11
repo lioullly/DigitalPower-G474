@@ -22,7 +22,7 @@
 #define DC_UV               0.0f   // DC bus undervoltage threshold (V)
 
 // --- current protection ---
-#define IL1_OC              5.0f   // overcurrent RMS threshold (A)
+#define IL1_OC              9.0f  // overcurrent instantaneous I threshold (A)
 
 // --- off-grid voltage control (task_control_1p.c) ---
 #define OFFGRID_UREF        20.0f   // AC output RMS voltage reference [V]

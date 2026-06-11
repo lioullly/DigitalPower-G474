@@ -34,5 +34,6 @@ extern Integral_TypeDef Sine_Phase_Integrator;
 extern DMA_HandleTypeDef hdma_adc1;
 extern DMA_HandleTypeDef hdma_usart1_tx;
 extern float g_dbg_err, g_dbg_vctrl, g_dbg_m;
+extern float g_pfc_phase_deg;
 
 #endif

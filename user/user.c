@@ -17,6 +17,7 @@ float Iref_alpha = 0.0f, Iref_beta = 0.0f;
 volatile int32_t g_il1, g_il2, g_il3;
 volatile uint8_t g_adc_data_ready;
 float g_dbg_err, g_dbg_vctrl, g_dbg_m;
+float g_pfc_phase_deg = 0.0f;
 volatile float g_sin_wt;
 uint16_t adc2_voltage_buffer[4];
 uint16_t adc1_injected_buffer[2];  // DMA from ADC1: [IL1, IL2]
@@ -72,14 +73,16 @@ void user_Init(void)
 
 void Task_Button_Scan(void)
 {
-    static uint8_t last_Run_Flag = 0xFF, last_user = 1;
-    HAL_GPIO_TogglePin(Green_GPIO_Port, Green_Pin);  // 50Hz heartbeat
+    // --- heartbeat ---
+    HAL_GPIO_TogglePin(Green_GPIO_Port, Green_Pin);  // 50Hz
 
+    // --- PC5 (user): Run_Flag toggle ---
+    static uint8_t last_Run_Flag = 0xFF, last_user = 1;
     if (last_Run_Flag == 0xFF) last_user = HAL_GPIO_ReadPin(user_GPIO_Port, user_Pin);
     uint8_t user = HAL_GPIO_ReadPin(user_GPIO_Port, user_Pin);
     if (last_user == GPIO_PIN_SET && user == GPIO_PIN_RESET) {
         if (!Run_Flag && g_fault_code != 0) {
-            g_fault_code = 0;  // clear fault, don't start
+            g_fault_code = 0;
         } else {
             Run_Flag = !Run_Flag;
         }
@@ -89,8 +92,27 @@ void Task_Button_Scan(void)
     if (Run_Flag != last_Run_Flag) {
         last_Run_Flag = Run_Flag;
         if (!Run_Flag) {
-            // HRTIM handled by state machine — Button_Scan only toggles Run_Flag
             HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_RESET);
         }
     }
+
+    // --- KEY1 (PB13): phase adjust (short +step, long toggle step size) ---
+    static uint16_t key1_hold = 0;
+    static uint8_t  key1_last = 1;
+    static float    step = 1.0f;
+    uint8_t key1 = HAL_GPIO_ReadPin(KEY1_GPIO_Port, KEY1_Pin);
+    if (key1_last == GPIO_PIN_SET && key1 == GPIO_PIN_RESET) {
+        key1_hold = 0;  // pressed
+    } else if (key1 == GPIO_PIN_RESET) {
+        key1_hold++;    // still held
+    } else if (key1_last == GPIO_PIN_RESET && key1 == GPIO_PIN_SET) {
+        // released
+        if (key1_hold < 50) {  // <500ms = short press
+            g_pfc_phase_deg += step;
+            if (g_pfc_phase_deg >= 360.0f) g_pfc_phase_deg -= 360.0f;
+        } else {               // long press = toggle step
+            step = (step > 0.5f) ? 0.1f : 1.0f;
+        }
+    }
+    key1_last = key1;
 }

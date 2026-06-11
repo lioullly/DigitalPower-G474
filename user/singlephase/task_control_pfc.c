@@ -5,27 +5,24 @@
 #include "task_pwm_1p.h"
 
 /*
- * PFC_PHASE_DLY 相位-PF 对照表 (@10kHz, 50Hz电网, 1sample=1.8°)
- * ┌──────────┬───────────────┬──────┬──────────┐
- * │  延时    │      φ        │  PF  │   类型   │
- * ├──────────┼───────────────┼──────┼──────────┤
- * │    0     │      0°       │  1.0 │  UPF     │
- * │   17     │    30° lag    │ 0.87 │  感性    │
- * │   33     │    60° lag    │ 0.50 │  感性    │
- * │   50     │    90° lag    │ 0.00 │ 纯感性   │
- * │  100     │   180°(反相)  │ -1.0 │  逆变    │
- * │  150     │  270°=90°lead │ 0.00 │ 纯容性   │
- * │  167     │ 300°=60°lead  │-0.50 │  容性    │
- * │  183     │ 330°=30°lead  │-0.87 │  容性    │
- * │  200     │ 360°=  0°     │ 1.00 │  UPF     │
- * └──────────┴───────────────┴──────┴──────────┘
- * 感/容 = 感性PF为正 容性PF为负
+ * g_pfc_phase_deg — 实测标定 (电流环 ~7° 系统延迟)
+ * 线性插值可用, 容性 PF 用 >180° 值
+ * ┌──────────┬────────────────┐
+ * │  实测PF  │  g_pfc_phase_deg │
+ * ├──────────┼────────────────┤
+ * │  0.992   │    0.0         │
+ * │  0.921   │   30.0         │
+ * │  0.538   │   60.0         │
+ * │  0.496   │   60.92        │
+ * └──────────┴────────────────┘
+ * 60.75≈PF0.5, 299.25≈PF-0.5
  */
-#define PFC_IREF_MAX   1.4f       // max RMS current reference [A]
+#define PFC_IREF_MAX   5.66f      // max RMS current [A], peak ~8A, < IL1_OC(10A)
 #define PFC_IREF_PK   (PFC_IREF_MAX * 1.414f)  // peak
 
-#define PFC_PHASE_DLY  0          // delay [samples @10kHz]; 0=UPF, 167=PF=-0.5
-#define PFC_DLY_BUF  200          // buffer size (covers full 360°)
+// g_pfc_phase_deg — runtime adjustable via KEY1 (PB13) short +/-1°, long toggle step
+#define PFC_DLY_BUF    200        // 1 grid cycle @ 50Hz (20ms)
+#define PFC_DEG_PER_SAMPLE  (360.0f * 50.0f / 10000.0f)  // 1.8°/sample
 
 
 void Task_Control_PFC(void)
@@ -79,7 +76,7 @@ void Task_Control_PFC(void)
         HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
         f32_PR_Init(&Current_PR_Loop_alpha, 4.0f, 10.0f, 50.0f, 10.0f, 10000.0f, 10, -10);
-        f32_PI_Init(&v_pi, 0.001f, 0.05f, 0.7f, 10, -1);
+        f32_PI_Init(&v_pi, 0.001f, 0.1f, 2.0f, 10, -1);
         iref = 0.05f;
         v_cnt = 0;
         HAL_HRTIM_WaveformOutputStart(&hhrtim1,
@@ -98,15 +95,26 @@ void Task_Control_PFC(void)
         iref = tmp;
     }
 
-    // --- current reference from voltage loop output ---
+    // --- current reference with phase-shiftable template ---
     static float dly_buf[PFC_DLY_BUF] = {0};
     static uint16_t dly_idx = 0;
     float peak = g_uab_rms * 1.414f;
     if (peak < 1.0f) peak = 1.0f;
     float v_template = U_line[0] / peak;
-    float tpl = (PFC_PHASE_DLY > 0)
-        ? dly_buf[(dly_idx + PFC_DLY_BUF - PFC_PHASE_DLY) % PFC_DLY_BUF]
-        : v_template;
+
+    // linear interpolation for sub-sample phase resolution (~0.1°)
+    float tpl;
+    if (g_pfc_phase_deg > 0.0f) {
+        float dly = g_pfc_phase_deg / PFC_DEG_PER_SAMPLE;  // fractional sample delay
+        uint16_t lo = (uint16_t)dly;
+        float    fr = dly - (float)lo;
+        uint16_t hi = (lo + 1 < PFC_DLY_BUF) ? lo + 1 : lo;
+        uint16_t i_lo = (dly_idx + PFC_DLY_BUF - lo) % PFC_DLY_BUF;
+        uint16_t i_hi = (dly_idx + PFC_DLY_BUF - hi) % PFC_DLY_BUF;
+        tpl = dly_buf[i_lo] * (1.0f - fr) + dly_buf[i_hi] * fr;
+    } else {
+        tpl = v_template;
+    }
     dly_buf[dly_idx] = v_template;
     dly_idx = (dly_idx + 1) % PFC_DLY_BUF;
     float i_ref = tpl * (iref * 1.414f);
