@@ -49,7 +49,9 @@ void Task_Protect_1P(void)
     }
     else uv_cnt = 0;
 
-    if (g_irms > IL1_OC_RMS)
+    float i_abs = I_line[0];
+    if (i_abs < 0.0f) i_abs = -i_abs;
+    if (i_abs > IL1_OC)
     {
         if (++oc_cnt >= FAULT_DELAY)
             g_fault_code = FAULT_OC;

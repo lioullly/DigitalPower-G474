@@ -39,24 +39,20 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 // JustFloat binary: 10 floats + 4-byte tail (0x00 0x00 0x80 0x7F)
 void Task_VOFA_1P(void)
 {
-    float data[12];
-    data[0] = -I_line[0];      // Ch0: instantaneous I
-    data[1] = g_uab_rms;      // Ch1: Urms
-    data[2] = g_irms;         // Ch2: Irms
-    data[3] = (float)g_il1;   // Ch3: IL1 raw
-    data[4] = g_dbg_m;        // Ch4: duty_a (via g_dbg_m)
-    data[5] = (float)adc2_voltage_buffer[1];  // Ch5: Udc raw
-    data[6] = U_line[0];      // Ch6: Uab instantaneous
-    data[7] = (float)g_fault_code;            // Ch7: fault code
-    data[8] = g_wt;           // Ch8: PLL phase [0,1)
-    data[9] = g_freq_est;     // Ch9: PLL frequency
-    data[10] = (float)g_pll_locked; // Ch10: grid_mode  
-    data[11] = (float)I_mag;  // Ch11: PI output (current mag ref)
-    uint8_t frame[52];
-    memcpy(frame, data, 48);
-    frame[48] = 0x00; frame[49] = 0x00;
-    frame[50] = 0x80; frame[51] = 0x7F;
-    vofa_send(frame, 52);
+    float data[8];
+    data[0] = I_line[0];       // Ch0: instantaneous I
+    data[1] = g_irms;         // Ch1: Irms
+    data[2] = U_line[0];      // Ch2: Uab instantaneous
+    data[3] = g_uab_rms;      // Ch3: Urms
+    data[4] = U_line[1];      // Ch4: Udc
+    data[5] = (float)g_fault_code;  // Ch5: fault code
+    data[6] = g_dbg_vctrl;    // Ch6: v_ctrl (PR output)
+    data[7] = g_dbg_err;      // Ch7: i_err
+    uint8_t frame[36];
+    memcpy(frame, data, 32);
+    frame[32] = 0x00; frame[33] = 0x00;
+    frame[34] = 0x80; frame[35] = 0x7F;
+    vofa_send(frame, 36);
 }
 
 void Task_VOFA_3P(void)

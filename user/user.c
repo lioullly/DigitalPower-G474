@@ -77,7 +77,13 @@ void Task_Button_Scan(void)
 
     if (last_Run_Flag == 0xFF) last_user = HAL_GPIO_ReadPin(user_GPIO_Port, user_Pin);
     uint8_t user = HAL_GPIO_ReadPin(user_GPIO_Port, user_Pin);
-    if (last_user == GPIO_PIN_SET && user == GPIO_PIN_RESET) Run_Flag = !Run_Flag;
+    if (last_user == GPIO_PIN_SET && user == GPIO_PIN_RESET) {
+        if (!Run_Flag && g_fault_code != 0) {
+            g_fault_code = 0;  // clear fault, don't start
+        } else {
+            Run_Flag = !Run_Flag;
+        }
+    }
     last_user = user;
 
     if (Run_Flag != last_Run_Flag) {

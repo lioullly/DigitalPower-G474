@@ -101,7 +101,7 @@ void Task_Control_PI_PR_Loop(void)
             f32_PR_Init(&Current_PR_Loop_alpha, 2.0f, 20.0f, 50.0f, 10.0f, 10000.0f, 60.0f, -60.0f);
         }
         v_dec = 0;
-        if (!grid_mode) i_mag = UREF * 1.414f;  // pre-charge Vpeak for faster startup
+        if (!grid_mode) i_mag = OFFGRID_UREF * 1.414f;  // pre-charge Vpeak for faster startup
         HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
 
@@ -131,7 +131,7 @@ void Task_Control_PI_PR_Loop(void)
     if (state != STATE_GRID_TIED) {
         if (++v_dec >= 200) {
             v_dec = 0;
-            i_mag = f32_PI_Calculate(&Voltage_PI_Loop, UREF, g_uab_rms);
+            i_mag = f32_PI_Calculate(&Voltage_PI_Loop, OFFGRID_UREF, g_uab_rms);
         }
     }
 

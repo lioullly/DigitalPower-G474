@@ -46,9 +46,11 @@ void UserTasks_Init(void)
 {
     Scheduler_Init(20);
     Scheduler_AddTask(Task_ADC_Fetch,           10000,  1);
+//    Scheduler_AddTask(Task_Debug_SPWM,         10000,  1);
     Scheduler_AddTask(Task_Protect_1P,          10000,  1);
     Scheduler_AddTask(Task_PLL_1P_Process,      1000,   1);
-    Scheduler_AddTask(Task_Control_PI_PR_Loop,  10000,  1);
+//    Scheduler_AddTask(Task_Control_PI_PR_Loop,  10000,  1);
+    Scheduler_AddTask(Task_Control_PFC,         10000,  1);
     Scheduler_AddTask(Task_Button_Scan,         100,    1);
     Scheduler_AddTask(Task_VOFA_1P,             5000,   1);
 }
