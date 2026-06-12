@@ -4,9 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-extern float g_freq_est;
 extern uint8_t g_fault_code;
-extern uint8_t g_pll_locked;
 
 static uint8_t vofa_ping[64];    // ping-pong buffer A
 static uint8_t vofa_pong[64];    // ping-pong buffer B

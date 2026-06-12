@@ -3,7 +3,7 @@
 #include "pi_pr_ctrl.h"
 #include "hardware_def.h"
 #include "task_pwm_1p.h"
-#include "task_pll_1p.h"
+
 
 extern PI_TypeDef Voltage_PI_Loop;
 extern PR_TypeDef Current_PR_Loop_alpha;
@@ -94,11 +94,11 @@ void Task_Control_PI_PR_Loop(void)
         grid_mode = (g_uab_rms > 20.0f) ? 1 : 0;
         if (grid_mode) {
             // Grid-tied: PR current-loop only (no PI), i_mag set externally
-            f32_PR_Init(&Current_PR_Loop_alpha, 0.5f, 5.0f, 50.0f, 10.0f, 10000.0f, 60.0f, -60.0f);
+            f32_PR_Init(&Current_PR_Loop_alpha, 0.5f, 5.0f, 50.0f, 10.0f, 10000.0f, PR_CTRL_CLAMP, -PR_CTRL_CLAMP);
             i_mag = 1.0f;  // default grid current amplitude
         } else {
             f32_PI_Init(&Voltage_PI_Loop, 0.02f, 0.5f, 5.0f, (int16_t)DC_OV, 0);  // Vpeak output
-            f32_PR_Init(&Current_PR_Loop_alpha, 2.0f, 20.0f, 50.0f, 10.0f, 10000.0f, 60.0f, -60.0f);
+            f32_PR_Init(&Current_PR_Loop_alpha, 2.0f, 10.0f, 50.0f, 10.0f, 10000.0f, PR_CTRL_CLAMP, -PR_CTRL_CLAMP);
         }
         v_dec = 0;
         if (!grid_mode) i_mag = OFFGRID_UREF * 1.414f;  // pre-charge Vpeak for faster startup
@@ -157,7 +157,6 @@ void Task_Control_PI_PR_Loop(void)
 
     g_dbg_err   = i_err;
     g_dbg_vctrl = v_ctrl;
-    g_dbg_m     = m;
 
     // --- SPWM ---
     g_duty_a = 0.5f + 0.5f * m;

@@ -4,7 +4,7 @@
 #include "task_adc.h"
 #include "singlephase/task_protect_1p.h"
 #include "task_control_1p.h"
-#include "singlephase/task_pll_1p.h"
+
 #include "singlephase/task_control_pfc.h"
 #include "singlephase/task_display_1p.h"
 #include "vofa.h"
@@ -38,7 +38,6 @@ void Task_Debug_SPWM(void)
     if (g_duty_a < 0.05f) g_duty_a = 0.05f;
     if (g_duty_b < 0.05f) g_duty_b = 0.05f;
     g_duty_c = 0.5f;
-    g_dbg_m = g_duty_a;
     Task_PWM_1P_Update();
 }
 
@@ -48,7 +47,6 @@ void UserTasks_Init(void)
     Scheduler_AddTask(Task_ADC_Fetch,           10000,  1);
 //    Scheduler_AddTask(Task_Debug_SPWM,         10000,  1);
     Scheduler_AddTask(Task_Protect_1P,          10000,  1);
-    Scheduler_AddTask(Task_PLL_1P_Process,      1000,   1);
 //    Scheduler_AddTask(Task_Control_PI_PR_Loop,  10000,  1);
     Scheduler_AddTask(Task_Control_PFC,         10000,  1);
     Scheduler_AddTask(Task_Button_Scan,         100,    1);

@@ -174,3 +174,62 @@ float f32_PI_Calculate(PI_TypeDef *PI_Pamer, float REF, float Sample)
 	PI_Pamer->y1 = PI_Pamer->y0; // 将输出值赋值给结构体中的y1变量，用于下一次计算
 	return PI_Pamer->y0;		 // 返回输出值
 }
+
+// ============================================================
+// 希尔伯特变换: 单相输入 → 正交 α-β 对
+// 一阶全通滤波器, k = (1-tan(π·f0/Fs))/(1+tan(π·f0/Fs))
+// α = input, β = Hilbert(input) @ 90° phase shift at f0
+// ============================================================
+void f32_Hilbert_Init(Hilbert_TypeDef *H, float _f0, float _Fs)
+{
+	H->f0 = _f0;
+	H->Fs = _Fs;
+	float wT = PI * _f0 / _Fs;
+	float tw = arm_sin_f32(wT) / arm_cos_f32(wT);
+	H->k = (1.0f - tw) / (1.0f + tw);
+	H->x1 = 0.0f;
+	H->y1 = 0.0f;
+}
+
+void f32_Hilbert_Calculate(Hilbert_TypeDef *H, float input, float *alpha, float *beta)
+{
+	// 全通滤波器: y[n] = k*x[n] - x[n-1] + k*y[n-1]
+	float y = H->k * input - H->x1 + H->k * H->y1;
+	H->x1 = input;
+	H->y1 = y;
+	*alpha = input;      // 同相分量 α
+	*beta  = y;          // 正交分量 β (滞后90° @ f0)
+}
+
+// ============================================================
+// 2阶陷波器: 滤除 f0 频率分量
+// biquad: H(z) = (1 - 2·cos(ω₀)·z⁻¹ + z⁻²) / (1+α - 2·cos(ω₀)·z⁻¹ + (1-α)·z⁻²)
+// α = sin(ω₀)/(2·Q), ω₀ = 2π·f0/Fs
+// ============================================================
+void f32_Notch_Init(Notch_TypeDef *N, float f0, float Q, float Fs)
+{
+	float w0 = 2.0f * PI * f0 / Fs;
+	float alpha = arm_sin_f32(w0) / (2.0f * Q);
+	float cos_w0 = arm_cos_f32(w0);
+
+	float a0 = 1.0f + alpha;
+	N->b0 = 1.0f / a0;
+	N->b1 = -2.0f * cos_w0 / a0;
+	N->b2 = 1.0f / a0;
+	N->a1 = -2.0f * cos_w0 / a0;
+	N->a2 = (1.0f - alpha) / a0;
+
+	N->x1 = N->x2 = 0.0f;
+	N->y1 = N->y2 = 0.0f;
+}
+
+float f32_Notch_Calculate(Notch_TypeDef *N, float input)
+{
+	float y = N->b0 * input + N->b1 * N->x1 + N->b2 * N->x2
+	        - N->a1 * N->y1 - N->a2 * N->y2;
+	N->x2 = N->x1;
+	N->x1 = input;
+	N->y2 = N->y1;
+	N->y1 = y;
+	return y;
+}

@@ -62,4 +62,30 @@ void ABC_to_DQ(float DQ[2], float ABC[3], float _wt);
 void DQ_to_ABC(float DQ[2], float ABC[3], float _wt);
 void Cal_Sin_Cos(float _theta[3], int16_t _Sin[3], int16_t _Cos[3]);
 
+// 希尔伯特变换 — 单相→正交(α-β)对
+// 一阶全通滤波器，在 f0 处产生精确 90° 相移
+typedef struct
+{
+    float k;         // 全通滤波器系数
+    float x1;        // 上一拍输入
+    float y1;        // 上一拍输出
+    float f0;        // 设计频率 [Hz]
+    float Fs;        // 采样频率 [Hz]
+} Hilbert_TypeDef;
+
+void f32_Hilbert_Init(Hilbert_TypeDef *H, float _f0, float _Fs);
+void f32_Hilbert_Calculate(Hilbert_TypeDef *H, float input, float *alpha, float *beta);
+
+// 2阶陷波器 — 滤除 f0 频率分量（用于 DC bus 100Hz 纹波抑制）
+typedef struct
+{
+    float b0, b1, b2;    // 分子系数
+    float a1, a2;        // 分母系数 (a0 归一化为1)
+    float x1, x2;        // 输入状态
+    float y1, y2;        // 输出状态
+} Notch_TypeDef;
+
+void f32_Notch_Init(Notch_TypeDef *N, float f0, float Q, float Fs);
+float f32_Notch_Calculate(Notch_TypeDef *N, float input);
+
 #endif

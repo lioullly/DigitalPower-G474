@@ -13,9 +13,6 @@ int _write(int fd, char *ptr, int len)
 }
 #endif
 
-// ---- Externs from other modules ----
-extern uint8_t g_pll_locked;
-extern float   g_freq_est;
 extern uint8_t g_fault_code;
 
 void Task_Terminal(void)

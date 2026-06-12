@@ -1,8 +1,7 @@
 #include "task_protect_1p.h"
 #include "user.h"
 #include "hardware_def.h"
-#include "task_pll_1p.h"
-
+// #include "task_pll_1p.h" — removed (unused)
 uint8_t g_fault_code = FAULT_NONE;
 
 #define FAULT_DELAY  10
@@ -53,7 +52,7 @@ void Task_Protect_1P(void)
     if (i_abs < 0.0f) i_abs = -i_abs;
     if (i_abs > IL1_OC)
     {
-        if (++oc_cnt >= FAULT_DELAY)
+        if (++oc_cnt >= 3)
             g_fault_code = FAULT_OC;
     }
     else oc_cnt = 0;

@@ -67,6 +67,8 @@ void Error_Handler(void);
 #define il2_p_GPIO_Port GPIOA
 #define il2_n_Pin GPIO_PIN_3
 #define il2_n_GPIO_Port GPIOA
+#define KEY3_Pin GPIO_PIN_4
+#define KEY3_GPIO_Port GPIOC
 #define user_Pin GPIO_PIN_5
 #define user_GPIO_Port GPIOC
 #define Green_Pin GPIO_PIN_11
@@ -81,6 +83,8 @@ void Error_Handler(void);
 #define il3_n_GPIO_Port GPIOB
 #define Red_Pin GPIO_PIN_15
 #define Red_GPIO_Port GPIOA
+#define KEY4_Pin GPIO_PIN_10
+#define KEY4_GPIO_Port GPIOC
 
 /* USER CODE BEGIN Private defines */
 

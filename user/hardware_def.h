@@ -6,7 +6,6 @@
 // --- ADC scaling ---
 #define VOLTAGE_GAIN       (4.7f/200.0f)
 #define VOLTAGE_CONST      (3.3f/(VOLTAGE_GAIN*4095))
-#define UAB_VOLTAGE_CONST  (VOLTAGE_CONST * 1.0f)   // same divider as Udc
 
 #define R                  (0.020f)
 #define CURRENT_GAIN       (8.2f)
@@ -18,21 +17,30 @@
 #define K_CONST            (2.0f*PI*Fsw*L)
 
 // --- DC bus protection ---
-#define DC_OV              60.0f   // DC bus overvoltage threshold (V)
+#define DC_OV              80.0f   // DC bus overvoltage threshold (V)
 #define DC_UV               0.0f   // DC bus undervoltage threshold (V)
 
 // --- current protection ---
 #define IL1_OC              9.0f  // overcurrent instantaneous I threshold (A)
 
+// --- PR current loop output clamp (all modes) ---
+#define PR_CTRL_CLAMP        20.0f  // v_ctrl output limit [V]
+
 // --- off-grid voltage control (task_control_1p.c) ---
 #define OFFGRID_UREF        20.0f   // AC output RMS voltage reference [V]
 #define I_MAG_DEFAULT        1.0f   // initial Vpeak [V]
 #define I_MAG_MAX           10.0f   // PI output upper clamp [Vpeak]
-#define OFFGRID_MOD_INDEX    0.5f
 
 // --- PFC current control (task_control_pfc.c) ---
-#define PFC_UREF            40.0f   // DC bus voltage reference [V] (for future voltage loop)
-#define PFC_VPEAK      (20.0f * 1.414f)  // nominal AC peak voltage [V]
-#define PFC_K          (1.0f / PFC_VPEAK) // Uab→normalized gain
+#define PFC_UREF            40.0f   // DC bus voltage reference [V]
+#define PFC_IREF_MAX         5.66f  // max RMS current [A], peak ~8A
+#define PFC_PHASE_DEG_DEFAULT 0.0f  // initial phase shift [°]
+
+// --- grid-tied inverter (task_control_grid.c) ---
+#define GRID_I_MAG_DEFAULT   1.0f   // initial active peak current [A]
+#define GRID_IREF_MAX         5.0f  // max peak current [A]
+#define GRID_PHI_DEG_DEFAULT 0.0f   // initial power angle [°], 0=UPF
+
+
 
 #endif
