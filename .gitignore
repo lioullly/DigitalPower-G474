@@ -32,6 +32,11 @@ MDK-ARM/*.uvprojx.lnk
 .mxproject
 *.lnk
 
+# CubeMX generated (regenerate from .ioc)
+Core/
+Drivers/
+Middlewares/
+
 # Claude
 memory/
 .claude/
