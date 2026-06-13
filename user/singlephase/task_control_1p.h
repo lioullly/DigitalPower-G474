@@ -3,6 +3,6 @@
 
 #include "main.h"
 
-void Task_Control_PI_PR_Loop(void);
+void Task_Control_OffGrid(void);
 
 #endif

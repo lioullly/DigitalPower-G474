@@ -25,6 +25,9 @@ void Scheduler_Dispatch(void);
 
 void tim_delay_us(uint32_t us);
 
+extern volatile float g_cpu_usage;   // CPU usage % (0-100), updated ~10Hz
+extern volatile float g_isr_us;      // ISR execution time in μs
+
 #ifndef TASK_YIELD_US
 #define TASK_YIELD_US  2   // yield between tasks to prevent CPU hogging
 #endif

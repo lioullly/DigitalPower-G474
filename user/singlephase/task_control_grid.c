@@ -5,15 +5,15 @@
 #include "task_pwm_1p.h"
 
 // ----- grid-tied inverter: Hilbert sync + active/reactive power -----
+// Hilbert locks grid phase, PR current loop injects active/reactive current.
 // i_ref = i_mag * [v_α/v_mag + tan(φ)·v_β/v_mag]
-// params in hardware_def.h: GRID_PHI_DEG_DEFAULT, GRID_I_MAG_DEFAULT, GRID_IREF_MAX
-#define GRID_UREF_MIN   20.0f   // min grid RMS to attempt sync [V]
 
 void Task_Control_Grid(void)
 {
     static uint8_t  prev_active = 0;
     static Hilbert_TypeDef hilbert;
-    static float last_phase = 0.0f;
+    static float    last_phase = 0.0f;
+    static float    i_mag = GRID_I_MAG_DEFAULT;
 
     if (!Run_Flag) {
         HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_RESET);
@@ -29,7 +29,7 @@ void Task_Control_Grid(void)
         return;
     }
 
-    // --- activation: grid must be present ---
+    // --- activation: grid must be present (with hysteresis) ---
     uint8_t active;
     if (prev_active) {
         active = (g_uab_rms > (GRID_UREF_MIN * 0.8f));
@@ -52,13 +52,12 @@ void Task_Control_Grid(void)
     if (!active) return;
 
     // --- one-shot init ---
-    static float i_mag = GRID_I_MAG_DEFAULT;
     if (rising) {
         HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
-        f32_PR_Init(&Current_PR_Loop_alpha, 4.0f, 10.0f, 50.0f, 10.0f, 10000.0f, PR_CTRL_CLAMP, -PR_CTRL_CLAMP);
-        f32_Hilbert_Init(&hilbert, 50.0f, 10000.0f);
-        i_mag = 1.0f;
+        f32_PR_Init(&Current_PR_Loop_alpha, 4.0f, 10.0f, 50.0f, 10.0f, 25000.0f, PR_CTRL_CLAMP, -PR_CTRL_CLAMP);
+        f32_Hilbert_Init(&hilbert, 50.0f, 25000.0f);
+        i_mag = GRID_I_MAG_DEFAULT;
         last_phase = 0.0f;
         HAL_HRTIM_WaveformOutputStart(&hhrtim1,
             HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
@@ -75,22 +74,19 @@ void Task_Control_Grid(void)
     if (dphase >  PI) dphase -= 2.0f * PI;
     if (dphase < -PI) dphase += 2.0f * PI;
     last_phase = phase;
-    float freq_raw = dphase * 1591.55f;           // 10k/2π ≈ 1591.55
+    float freq_raw = dphase * 3978.87f;            // 25k/2π ≈ 3978.87
     g_freq_est += 0.02f * (freq_raw - g_freq_est); // LPF ~2Hz
 
-    // --- active + reactive current reference ---
+    // --- current reference: cos(φ)·v_α + sin(φ)·v_β, constant magnitude ---
     float v_mag = sqrtf(v_alpha * v_alpha + v_beta * v_beta);
     if (v_mag < 1.0f) v_mag = 1.0f;
     float phi_rad = g_grid_phi_deg * (PI / 180.0f);
-    float tan_phi = arm_sin_f32(phi_rad) / arm_cos_f32(phi_rad);
-
-    float i_act = i_mag * (v_alpha / v_mag);          // 瞬时有功电流
-    float i_rct = i_mag * tan_phi * (v_beta / v_mag);  // 瞬时无功电流
-    float i_ref = i_act + i_rct;
+    float i_ref = i_mag * (arm_cos_f32(phi_rad) * (v_alpha / v_mag)
+                         + arm_sin_f32(phi_rad) * (v_beta / v_mag));
     if (i_ref >  GRID_IREF_MAX) i_ref =  GRID_IREF_MAX;
     if (i_ref < -GRID_IREF_MAX) i_ref = -GRID_IREF_MAX;
 
-    // --- PR current loop (inverter: current opposite direction vs PFC) ---
+    // --- PR current loop (inverter: current out of bridge) ---
     float i_fb   = -I_line[0];
     float i_err  = i_ref - i_fb;
     float v_ctrl = f32_PR_Calculate(&Current_PR_Loop_alpha, i_err);
@@ -103,14 +99,5 @@ void Task_Control_Grid(void)
     g_dbg_err   = i_err;
     g_dbg_vctrl = v_ctrl;
 
-    // --- SPWM via g_duty ---
-    g_duty_a = 0.5f + 0.5f * m;
-    g_duty_b = 0.5f - 0.5f * m;
-
-    if (g_duty_a > 0.95f) g_duty_a = 0.95f;
-    if (g_duty_b > 0.95f) g_duty_b = 0.95f;
-    if (g_duty_a < 0.05f) g_duty_a = 0.05f;
-    if (g_duty_b < 0.05f) g_duty_b = 0.05f;
-    g_duty_c = 0.5f;
-    Task_PWM_1P_Update();
+    _pwm_bipolar(m);
 }

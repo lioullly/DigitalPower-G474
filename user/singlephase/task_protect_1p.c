@@ -13,7 +13,8 @@ static uint16_t ov_cnt = 0;
 static uint16_t uv_cnt = 0;
 static uint16_t oc_cnt = 0;
 
-void Task_Protect_1P(void)
+// ISR-safe: called from ADC ISR @ 10kHz, no scheduler dependency
+void Task_Protect_1P_Run(void)
 {
     // clear latched fault on Run_Flag rising edge
     static uint8_t prev_run = 0;

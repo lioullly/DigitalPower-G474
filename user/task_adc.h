@@ -4,6 +4,6 @@
 #include "main.h"
 
 void Task_ADC_Init(void);
-void Task_ADC_Fetch(void);
+extern void (*g_control_isr)(void);
 
 #endif

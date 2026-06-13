@@ -4,19 +4,6 @@
 #include "hardware_def.h"
 #include "task_pwm_1p.h"
 
-/*
- * g_pfc_phase_deg — 实测标定 (电流环 ~7° 系统延迟)
- * 线性插值可用, 容性 PF 用 >180° 值
- * ┌──────────┬────────────────┐
- * │  实测PF  │  g_pfc_phase_deg │
- * ├──────────┼────────────────┤
- * │  0.992   │    0.0         │
- * │  0.921   │   30.0         │
- * │  0.538   │   60.0         │
- * │  0.496   │   60.92        │
- * └──────────┴────────────────┘
- * 60.75≈PF0.5, 299.25≈PF-0.5
- */
 #define PFC_IREF_PK   (PFC_IREF_MAX * 1.414f)  // peak
 
 
@@ -72,9 +59,9 @@ void Task_Control_PFC(void)
     if (rising) {
         HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
-        f32_PR_Init(&Current_PR_Loop_alpha, 4.0f, 10.0f, 50.0f, 10.0f, 10000.0f, PR_CTRL_CLAMP, -PR_CTRL_CLAMP);
+        f32_PR_Init(&Current_PR_Loop_alpha, 4.0f, 10.0f, 50.0f, 10.0f, 25000.0f, PR_CTRL_CLAMP, -PR_CTRL_CLAMP);
         f32_PI_Init(&v_pi, 0.001f, 0.1f, 2.0f, 10, -1);
-        f32_Hilbert_Init(&hilbert, 50.0f, 10000.0f);
+        f32_Hilbert_Init(&hilbert, 50.0f, 25000.0f);
         f32_Notch_Init(&udc_notch, 100.0f, 1.0f, 1000.0f);
         iref = 0.05f;
         v_cnt = 0;
@@ -85,8 +72,8 @@ void Task_Control_PFC(void)
             HRTIM_TIMERID_TIMER_A | HRTIM_TIMERID_TIMER_B);
     }
 
-    // --- voltage loop: decimate 10kHz→1kHz (every 10th call) ---
-    if (++v_cnt >= 10) {
+    // --- voltage loop: decimate 25kHz→1kHz (every 25th call) ---
+    if (++v_cnt >= 25) {
         v_cnt = 0;
         float udc_filt = f32_Notch_Calculate(&udc_notch, U_line[1]);
         float tmp = f32_PI_Calculate(&v_pi, PFC_UREF, udc_filt);
@@ -108,7 +95,7 @@ void Task_Control_PFC(void)
     if (i_ref >  PFC_IREF_PK) i_ref =  PFC_IREF_PK;
     if (i_ref < -PFC_IREF_PK) i_ref = -PFC_IREF_PK;
 
-    // --- pure P current loop ---
+    // ---  PR current loop ---
     float i_fb   = I_line[0];
     float i_err  = i_ref - i_fb;
     float v_ctrl = f32_PR_Calculate(&Current_PR_Loop_alpha, i_err);

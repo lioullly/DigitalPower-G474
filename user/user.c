@@ -3,6 +3,22 @@
 #include "task_adc.h"
 #include "task_pwm_1p.h"
 #include "task_protect_1p.h"
+#include "timebase_scheduler.h"
+#include "ssd1306.h"
+
+/*
+ * g_pfc_phase_deg — 实测标定 (电流环 ~7° 系统延迟)
+ * 线性插值可用, 容性 PF 用 >180° 值
+ * ┌──────────┬────────────────┐
+ * │  实测PF  │  g_pfc_phase_deg │
+ * ├──────────┼────────────────┤
+ * │  0.992   │    0.0         │
+ * │  0.921   │   30.0         │
+ * │  0.538   │   60.0         │
+ * │  0.496   │   60.92        │
+ * └──────────┴────────────────┘
+ * 60.75≈PF0.5, 299.25≈PF-0.5
+ */
 
 uint8_t Run_Flag = 0;
 PI_TypeDef Voltage_PI_Loop;
@@ -45,6 +61,13 @@ void user_Init(void)
     Task_ADC_Init();  // ADC calibration, DMA, injected start, DAC, integrator
 
     f32_PI_Init(&Voltage_PI_Loop, 0.02f, 0.25f, 12.0f, (int16_t)I_MAG_MAX, 0);
+
+    // --- OLED init (non-critical, skip if not connected) ---
+    if (HAL_I2C_IsDeviceReady(&SSD1306_I2C_PORT, SSD1306_I2C_ADDR, 2, 10) == HAL_OK) {
+        ssd1306_Init();
+        ssd1306_Fill(Black);
+        ssd1306_UpdateScreen();
+    }
 
     HAL_GPIO_WritePin(Green_GPIO_Port, Green_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(Red_GPIO_Port,   Red_Pin,   GPIO_PIN_RESET);

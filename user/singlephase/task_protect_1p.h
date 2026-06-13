@@ -8,7 +8,7 @@
 #define FAULT_UV    2
 #define FAULT_OC    3
 
-void Task_Protect_1P(void);
+void Task_Protect_1P_Run(void);
 
 extern uint8_t g_fault_code;
 

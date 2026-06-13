@@ -5,6 +5,9 @@
 static Task tasks[SCHED_MAX_TASKS];
 static uint32_t g_tick_us = 1;
 
+volatile float g_cpu_usage = 0.0f;
+volatile float g_isr_us    = 0.0f;
+
 void tim_delay_us(uint32_t us)
 {
     if (us == 0) return;
@@ -58,6 +61,12 @@ void Scheduler_Tick(void)
 
 void Scheduler_Dispatch(void)
 {
+    static uint32_t idle_ticks  = 0;
+    static uint32_t total_ticks = 0;
+
+    uint32_t start = DWT->CYCCNT;
+    uint8_t ran_any = 0;
+
     for (int i = 0; i < SCHED_MAX_TASKS; i++) {
         if (tasks[i].func && tasks[i].enabled && tasks[i].remaining_us == 0) {
             TaskFunc f = tasks[i].func;
@@ -68,7 +77,20 @@ void Scheduler_Dispatch(void)
                 tasks[i].remaining_us = tasks[i].period_us;
             }
             f();
-            tim_delay_us(TASK_YIELD_US);  // yield CPU to ISRs
+            tim_delay_us(TASK_YIELD_US);
+            ran_any = 1;
         }
+    }
+
+    uint32_t elapsed = DWT->CYCCNT - start;
+    total_ticks += elapsed;
+    if (!ran_any)
+        idle_ticks += elapsed;
+
+    // Update CPU usage every ~100ms
+    if (total_ticks >= SystemCoreClock / 10) {
+        g_cpu_usage = 100.0f * (1.0f - (float)idle_ticks / (float)total_ticks);
+        idle_ticks  = 0;
+        total_ticks = 0;
     }
 }
