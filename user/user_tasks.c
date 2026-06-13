@@ -72,7 +72,7 @@ void UserTasks_Init(void)
 
     // Select active control mode:
 //    g_control_isr = Task_Debug_SPWM;       // open-loop debug
-  g_control_isr = Task_Control_OffGrid;  // off-grid inverter
+//  g_control_isr = Task_Control_OffGrid;  // off-grid inverter
 //  g_control_isr = Task_Control_Grid;     // grid-tied inverter
 //  g_control_isr = Task_Control_PFC;      // PFC rectifier
 }

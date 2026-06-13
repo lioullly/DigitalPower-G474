@@ -13,7 +13,7 @@ void Task_Control_Grid(void)
     static uint8_t  prev_active = 0;
     static Hilbert_TypeDef hilbert;
     static float    last_phase = 0.0f;
-    static float    i_mag = GRID_I_MAG_DEFAULT;
+    static float    i_mag = 0.05f;
 
     if (!Run_Flag) {
         HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_RESET);
@@ -57,7 +57,7 @@ void Task_Control_Grid(void)
         HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
         f32_PR_Init(&Current_PR_Loop_alpha, 4.0f, 10.0f, 50.0f, 10.0f, 25000.0f, PR_CTRL_CLAMP, -PR_CTRL_CLAMP);
         f32_Hilbert_Init(&hilbert, 50.0f, 25000.0f);
-        i_mag = GRID_I_MAG_DEFAULT;
+        i_mag = 0.05f;
         last_phase = 0.0f;
         HAL_HRTIM_WaveformOutputStart(&hhrtim1,
             HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
@@ -77,20 +77,27 @@ void Task_Control_Grid(void)
     float freq_raw = dphase * 3978.87f;            // 25k/2π ≈ 3978.87
     g_freq_est += 0.02f * (freq_raw - g_freq_est); // LPF ~2Hz
 
-    // --- current reference: cos(φ)·v_α + sin(φ)·v_β, constant magnitude ---
+    // --- soft-start ramp i_mag: 0.05A → GRID_I_MAG_DEFAULT @ ~1A/s ---
+    if (i_mag < GRID_I_MAG_DEFAULT)
+        i_mag += 0.00004f;  // 0.00004 * 25000 = 1A/s
+    if (i_mag > GRID_I_MAG_DEFAULT)
+        i_mag = GRID_I_MAG_DEFAULT;
+
+    // --- current reference: i_mag(RMS) × 1.414 → peak, matching off-grid convention ---
     float v_mag = sqrtf(v_alpha * v_alpha + v_beta * v_beta);
     if (v_mag < 1.0f) v_mag = 1.0f;
     float phi_rad = g_grid_phi_deg * (PI / 180.0f);
-    float i_ref = i_mag * (arm_cos_f32(phi_rad) * (v_alpha / v_mag)
-                         + arm_sin_f32(phi_rad) * (v_beta / v_mag));
-    if (i_ref >  GRID_IREF_MAX) i_ref =  GRID_IREF_MAX;
-    if (i_ref < -GRID_IREF_MAX) i_ref = -GRID_IREF_MAX;
+    float i_ref = i_mag * 1.414f * (arm_cos_f32(phi_rad) * (v_alpha / v_mag)
+                                  + arm_sin_f32(phi_rad) * (v_beta / v_mag));
+    float i_pk = GRID_IREF_MAX * 1.414f;
+    if (i_ref >  i_pk) i_ref =  i_pk;
+    if (i_ref < -i_pk) i_ref = -i_pk;
 
     // --- PR current loop (inverter: current out of bridge) ---
     float i_fb   = -I_line[0];
     float i_err  = i_ref - i_fb;
     float v_ctrl = f32_PR_Calculate(&Current_PR_Loop_alpha, i_err);
-    float v_ref  = v_alpha - v_ctrl;
+    float v_ref  = v_alpha + v_ctrl;
 
     float udc = U_line[1];
     if (udc < 1.0f) udc = 1.0f;

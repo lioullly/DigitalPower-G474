@@ -31,19 +31,21 @@
 #define OFFGRID_IREF_MAX     5.0f   // max RMS current [A], peak ~7A
 #define OFFGRID_UDC_MIN     45.0f   // min DC bus to start [V]
 #define OFFGRID_PR_CLAMP    20.0f   // PR v_ctrl clamp [V]
-#define I_MAG_DEFAULT        1.0f   // legacy: initial current [A]
+#define I_MAG_DEFAULT        1.0f   // legacy: initial rms current [A]
 #define I_MAG_MAX           10.0f   // legacy: PI upper clamp
+
+// --- grid-tied inverter (task_control_grid.c) ---
+#define GRID_UREF_MIN   10.0f   // min grid RMS to attempt sync [V]
+#define GRID_I_MAG_DEFAULT   1.0f   // initial active rms current [A]
+#define GRID_IREF_MAX         5.0f  // max RMS current [A], peak = ×1.414
+#define GRID_PHI_DEG_DEFAULT 0.0f   // initial power angle [°], 0=UPF
 
 // --- PFC current control (task_control_pfc.c) ---
 #define PFC_UREF            40.0f   // DC bus voltage reference [V]
 #define PFC_IREF_MAX         5.66f  // max RMS current [A], peak ~8A
 #define PFC_PHASE_DEG_DEFAULT 0.0f  // initial phase shift [°]
 
-// --- grid-tied inverter (task_control_grid.c) ---
-#define GRID_UREF_MIN   10.0f   // min grid RMS to attempt sync [V]
-#define GRID_I_MAG_DEFAULT   1.0f   // initial active peak current [A]
-#define GRID_IREF_MAX         5.0f  // max peak current [A]
-#define GRID_PHI_DEG_DEFAULT 0.0f   // initial power angle [°], 0=UPF
+
 
 
 
