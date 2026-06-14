@@ -56,7 +56,7 @@ cmake --build build/Debug
 | 电压采样 | 4.7/200 分压 → ADC2 规则通道 DMA |
 | DC 母线耐压 | 80V |
 | 显示 | SSD1306 OLED (I2C3, 可选) |
-| 调试 | USART1 VOFA 上位机 @ 460800bps |
+| 调试 | USART1 VOFA 上位机 @ 500000bps |
 
 ## 三种工作模式
 
