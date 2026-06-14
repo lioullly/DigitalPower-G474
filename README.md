@@ -2,6 +2,47 @@
 
 STM32G474 单相电力电子数字电源平台，同一套硬件实现三种模式。
 
+## 克隆后首次配置
+
+仓库只保留用户代码，CubeMX 生成文件不在版本库中。克隆后按以下步骤操作：
+
+**1. 生成 HAL 代码**
+打开 `inverter.ioc` → Generate Code，恢复 `Core/` `Drivers/` `Middlewares/`。
+
+**2. 恢复用户代码块**（CubeMX 不会保留之前写在 `USER CODE` 区的内容）
+
+`Core/Src/main.c`：
+```c
+/* USER CODE BEGIN Includes */
+#include "user.h"
+#include "user_tasks.h"
+#include "timebase_scheduler.h"
+/* USER CODE END Includes */
+
+/* USER CODE BEGIN 2 */
+user_Init();
+/* USER CODE END 2 */
+
+// while(1) 内:
+/* USER CODE BEGIN 3 */
+Scheduler_Dispatch();
+/* USER CODE END 3 */
+```
+
+`Core/Src/stm32g4xx_it.c` — `HRTIM1_Master_IRQHandler` 内：
+```c
+/* USER CODE BEGIN HRTIM1_Master_IRQn 1 */
+extern void Scheduler_Tick(void);
+Scheduler_Tick();
+/* USER CODE END HRTIM1_Master_IRQn 1 */
+```
+
+**3. 编译**
+```bash
+cmake -B build/Debug -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug
+cmake --build build/Debug
+```
+
 ## 硬件
 
 | 参数 | 值 |
