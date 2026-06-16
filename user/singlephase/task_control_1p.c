@@ -5,7 +5,7 @@
 #include "task_pwm_1p.h"
 
 // ----- off-grid inverter: voltage PI + PR current loop -----
-// Voltage PI @ 1kHz → iref, PR current loop → v_ctrl
+// Voltage PI @ 200Hz → iref, PR current loop → v_ctrl
 
 void Task_Control_OffGrid(void)
 {

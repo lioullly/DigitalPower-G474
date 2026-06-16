@@ -24,6 +24,7 @@ void Task_Protect_1P_Run(void)
     if (rising) {
         g_fault_code = FAULT_NONE;
         ov_cnt = uv_cnt = oc_cnt = 0;
+        HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_RESET);
     }
 
     // startup blanking: skip OC while DC bus capacitor charges
@@ -31,8 +32,15 @@ void Task_Protect_1P_Run(void)
     if (rising) blank_cnt = 0;
     if (blank_cnt < BLANK_CNT) { blank_cnt++; goto skip_oc; }
 
-    if (g_fault_code != FAULT_NONE)
+    // --- fault blink: Red LED ~2Hz when latched ---
+    if (g_fault_code != FAULT_NONE) {
+        static uint16_t blink_cnt = 0;
+        if (++blink_cnt >= 12500) {        // 25000 / 12500 = 2Hz
+            blink_cnt = 0;
+            HAL_GPIO_TogglePin(Red_GPIO_Port, Red_Pin);
+        }
         return;
+    }
 
     // DC bus: U_line[1] = Udc
     if (U_line[1] > DC_OV)

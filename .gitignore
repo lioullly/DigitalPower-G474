@@ -37,9 +37,10 @@ Core/
 Drivers/
 Middlewares/
 
-# Claude
+# Claude (keep skills in git)
 memory/
-.claude/
+.claude/*
+!.claude/skills/
 
 # OS
 Thumbs.db
