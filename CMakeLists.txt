@@ -47,7 +47,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 )
 
 # Add sources to executable
-file(GLOB USER_SOURCES "user/*.c" "user/singlephase/*.c" "Hardware/ssd1306/*.c")
+file(GLOB USER_SOURCES "user/*.c" "user/singlephase/*.c" "user/dcdc/*.c" "Hardware/ssd1306/*.c")
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${USER_SOURCES}
 )
@@ -56,6 +56,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     user
     user/singlephase
+    user/dcdc
     Hardware/ssd1306
 )
 

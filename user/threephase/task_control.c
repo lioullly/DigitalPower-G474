@@ -2,7 +2,7 @@
 #include "task_pll.h"
 #include "user.h"
 #include "pi_pr_ctrl.h"
-#include "hardware_def.h"
+#include "hardware_def_3p.h"
 
 extern PR_TypeDef Current_PR_Loop_alpha;
 extern PR_TypeDef Current_PR_Loop_beta;

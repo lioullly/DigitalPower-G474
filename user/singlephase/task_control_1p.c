@@ -1,8 +1,11 @@
 #include "task_control_1p.h"
 #include "user.h"
 #include "pi_pr_ctrl.h"
-#include "hardware_def.h"
+#include "hardware_def_1p.h"
 #include "task_pwm_1p.h"
+#include "task_protect.h"
+#include "task_display_1p.h"
+#include "vofa.h"
 
 // ----- off-grid inverter: voltage PI + PR current loop -----
 // Voltage PI @ 200Hz → iref, PR current loop → v_ctrl
@@ -22,7 +25,7 @@ void Task_Control_OffGrid(void)
                 HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
                 HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2);
             HAL_HRTIM_WaveformCounterStop(&hhrtim1,
-                HRTIM_TIMERID_TIMER_A | HRTIM_TIMERID_TIMER_B);
+                HRTIM_TIMERID_TIMER_B);
         }
         prev_active = 0;
         v_cnt = 0;
@@ -44,7 +47,7 @@ void Task_Control_OffGrid(void)
             HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
             HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2);
         HAL_HRTIM_WaveformCounterStop(&hhrtim1,
-            HRTIM_TIMERID_TIMER_A | HRTIM_TIMERID_TIMER_B);
+            HRTIM_TIMERID_TIMER_B);
     }
     prev_active = active;
 
@@ -56,7 +59,7 @@ void Task_Control_OffGrid(void)
     if (rising) {
         HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
-        f32_PR_Init(&Current_PR_Loop_alpha, 4.0f, 10.0f, 50.0f, 10.0f, 25000.0f, PR_CTRL_CLAMP, -PR_CTRL_CLAMP);
+        f32_PR_Init(&Current_PR_Loop_alpha, 4.0f, 10.0f, 50.0f, 10.0f, 10000.0f, PR_CTRL_CLAMP, -PR_CTRL_CLAMP);
         f32_PI_Init(&v_pi, 0.005f, 0.1f, 0.5f, OFFGRID_IREF_MAX, 0);
         soft_max = 0.1f;
         iref = 0.0f;
@@ -66,14 +69,18 @@ void Task_Control_OffGrid(void)
             HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2);
         HAL_HRTIM_WaveformCounterStart(&hhrtim1,
             HRTIM_TIMERID_TIMER_A | HRTIM_TIMERID_TIMER_B);
+        g_protect_mask    = PROT_IL1_OC | PROT_ADC2_R1_OV | PROT_ADC2_R2_OV | PROT_ADC2_R2_UV;
+        g_protect_ac_mask = PROT_ADC2_R1_AC;
+        g_display_fn      = Task_Display_1P;
+        g_vofa_fn         = vofa_capture_1p;
     }
 
-    // --- voltage loop: decimate 25kHz→200Hz ---
-    if (++v_cnt >= 125) {
+    // --- voltage loop: decimate 10kHz→200Hz ---
+    if (++v_cnt >= 50) {
         v_cnt = 0;
         // soft-start ramp: 0.1A → OFFGRID_IREF_MAX over ~1s
         if (soft_max < OFFGRID_IREF_MAX)
-            soft_max += 0.025f;  // +0.025A/step @ 200Hz = +5A/s
+            soft_max += 0.1f;  // +0.1A/step @ 200Hz = +20A/s
         float tmp = f32_PI_Calculate(&v_pi, OFFGRID_UREF, g_uab_rms);
         if (tmp >  soft_max) tmp =  soft_max;
         if (tmp < 0.0f)      tmp = 0.0f;

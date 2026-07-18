@@ -180,7 +180,7 @@ I_line[2] = IL3   (ADC4, 未用)
 - KEY1/KEY2 同时修改 `g_pfc_phase_deg` 和 `g_grid_phi_deg`（两个任务互斥，只有激活的那个生效）
 - 相位值自动 wrap 到 [0, 360)
 
-## 保护 (task_protect_1p.c)
+## 保护 (task_protect.c)
 
 | 故障码 | 检测条件 | 去抖 |
 |--------|---------|------|
@@ -229,7 +229,7 @@ user/                           — 用户代码，CubeMX 不触及
 │   ├── task_control_grid.c / .h— 并网逆变器（Hilbert 同步 + 有功/无功）
 │   ├── task_control_1p.c / .h  — 离网/并网逆变 PI+PR 双环（备用，旧架构）
 │   ├── task_pwm_1p.c / .h      — HRTIM 比较值更新（双极性/单极性/倍频）
-│   ├── task_protect_1p.c / .h  — 过压/欠压/过流保护
+│   ├── task_protect.c / .h  — 过压/欠压/过流保护
 │   └── task_display_1p.c / .h  — OLED 显示（未编译）
 └── threephase/                 — 三相扩展（未编译）
 ```

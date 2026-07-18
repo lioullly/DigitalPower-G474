@@ -30,8 +30,16 @@ extern volatile uint8_t g_adc_data_ready;
 extern uint16_t adc2_voltage_buffer[4];
 extern Integral_TypeDef Sine_Phase_Integrator;
 extern DMA_HandleTypeDef hdma_usart1_tx;
-extern float g_dbg_err, g_dbg_vctrl;
+extern float g_dbg_err, g_dbg_vctrl, g_isr_khz;
 extern float g_pfc_phase_deg;
 extern float g_grid_phi_deg;
+extern uint8_t g_oled_ok;
+extern void (*g_adc_preproc)(void); // ADC ISR 预处理 @50kHz (电压填充/锁相/DAC/RMS)
+extern void (*g_display_fn)(void);  // OLED 显示函数
+extern void (*g_vofa_fn)(void);     // VOFA 采集函数
+
+// 各拓扑的 ADC 预处理函数
+void adc_preproc_1p(void);
+void adc_preproc_buck(void);
 
 #endif

@@ -2,23 +2,9 @@
 #include "user_tasks.h"
 #include "task_adc.h"
 #include "task_pwm_1p.h"
-#include "task_protect_1p.h"
+#include "task_protect.h"
 #include "timebase_scheduler.h"
 #include "ssd1306.h"
-
-/*
- * g_pfc_phase_deg — 实测标定 (电流环 ~7° 系统延迟)
- * 线性插值可用, 容性 PF 用 >180° 值
- * ┌──────────┬────────────────┐
- * │  实测PF  │  g_pfc_phase_deg │
- * ├──────────┼────────────────┤
- * │  0.992   │    0.0         │
- * │  0.921   │   30.0         │
- * │  0.538   │   60.0         │
- * │  0.496   │   60.92        │
- * └──────────┴────────────────┘
- * 60.75≈PF0.5, 299.25≈PF-0.5
- */
 
 uint8_t Run_Flag = 0;
 PI_TypeDef Voltage_PI_Loop;
@@ -26,19 +12,23 @@ PR_TypeDef Current_PR_Loop_alpha;
 Integral_TypeDef Sine_Phase_Integrator;
 float U_line[4] = {0}, I_line[3] = {0};
 float g_duty_a = 0.5f, g_duty_b = 0.5f, g_duty_c = 0.5f;
-float g_uab_rms = 0.0f, I_mag = I_MAG_DEFAULT, g_irms = 0.0f;
+float g_uab_rms = 0.0f, I_mag = 1.0f, g_irms = 0.0f;
 float U_coefficient, current_const;
 float Iref_alpha = 0.0f, Iref_beta = 0.0f;
 volatile int32_t g_il1, g_il2, g_il3;
 volatile uint8_t g_adc_data_ready;
-float g_dbg_err, g_dbg_vctrl;
-float g_pfc_phase_deg = PFC_PHASE_DEG_DEFAULT;
-float g_grid_phi_deg  = GRID_PHI_DEG_DEFAULT;
+float g_dbg_err, g_dbg_vctrl, g_isr_khz;
+float g_pfc_phase_deg = 0.0f;
+uint8_t g_oled_ok = 0;
+float g_grid_phi_deg  = 0.0f;
 float   g_wt         = 0.0f;
 uint8_t g_pll_locked = 0;
 float   g_freq_est   = 50.0f;
 volatile float g_sin_wt;
 uint16_t adc2_voltage_buffer[4];
+void (*g_adc_preproc)(void) = NULL;
+void (*g_display_fn)(void)  = NULL;
+void (*g_vofa_fn)(void)     = NULL;
 
 void user_Init(void)
 {
@@ -60,13 +50,14 @@ void user_Init(void)
 
     Task_ADC_Init();  // ADC calibration, DMA, injected start, DAC, integrator
 
-    f32_PI_Init(&Voltage_PI_Loop, 0.02f, 0.25f, 12.0f, (int16_t)I_MAG_MAX, 0);
+    f32_PI_Init(&Voltage_PI_Loop, 0.02f, 0.25f, 12.0f, 10, 0);
 
     // --- OLED init (non-critical, skip if not connected) ---
     if (HAL_I2C_IsDeviceReady(&SSD1306_I2C_PORT, SSD1306_I2C_ADDR, 2, 10) == HAL_OK) {
         ssd1306_Init();
         ssd1306_Fill(Black);
         ssd1306_UpdateScreen();
+        g_oled_ok = 1;
     }
 
     HAL_GPIO_WritePin(Green_GPIO_Port, Green_Pin, GPIO_PIN_RESET);
@@ -75,6 +66,7 @@ void user_Init(void)
     __HAL_UART_DISABLE_IT(&huart1, UART_IT_RXNE);  // RX not used, keep USART1 IRQ for TX TC chain
 
     HAL_HRTIM_WaveformCounterStart(&hhrtim1, HRTIM_TIMERID_MASTER);
+    HAL_HRTIM_WaveformCounterStart(&hhrtim1, HRTIM_TIMERID_TIMER_A);  // ADC trigger source
     HRTIM1->sMasterRegs.MDIER |= HRTIM_MDIER_MCMP1IE;  // re-apply after CubeMX clobber
 
     UserTasks_Init();
@@ -90,10 +82,11 @@ void Task_Button_Scan(void)
     if (last_Run_Flag == 0xFF) last_user = HAL_GPIO_ReadPin(user_GPIO_Port, user_Pin);
     uint8_t user = HAL_GPIO_ReadPin(user_GPIO_Port, user_Pin);
     if (last_user == GPIO_PIN_SET && user == GPIO_PIN_RESET) {
-        if (!Run_Flag && g_fault_code != 0) {
-            g_fault_code = 0;
+        if (!Run_Flag) {
+            g_fault_code = 0;   // clear any latched fault
+            Run_Flag = 1;       // start
         } else {
-            Run_Flag = !Run_Flag;
+            Run_Flag = 0;       // stop
         }
     }
     last_user = user;
