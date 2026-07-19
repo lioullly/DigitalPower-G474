@@ -10,15 +10,15 @@
 
 #define BUCK_UREF           12.0f   // output voltage reference [V]
 #define BUCK_VIN_MIN        15.0f   // min input voltage to start [V]
-#define BUCK_IL_MAX          5.0f   // max inductor current [A]
+#define BUCK_IL_MAX          2.0f   // max inductor current [A]
 #define BUCK_DUTY_MAX        0.90f  // max duty cycle
 #define BUCK_DUTY_ADJ_MAX    0.20f  // max PI duty adjustment from feedforward
 
-// Buck PI 参数 (L=220uH, Cout=1034uF, 10kHz 电流环/1kHz 电压环, 需在实物上整定)
-#define BUCK_V_KP            0.08f  // 电压外环 Kp
-#define BUCK_V_KI            3.0f   // 电压外环 Ki
-#define BUCK_I_KP            0.5f   // 电流内环 Kp
-#define BUCK_I_KI           20.0f   // 电流内环 Ki
+// Buck PI 参数 (电压外环1kHz→A, 电流内环10kHz→占空比, 需在实物上整定)
+#define BUCK_V_KP            0.5f   // 电压环 Kp (1V误差→0.5A)
+#define BUCK_V_KI            5.0f   // 电压环 Ki
+#define BUCK_I_KP           0.005f  // 电流环 Kp (1A误差→0.5%占空比)
+#define BUCK_I_KI           0.1f    // 电流环 Ki
 
 // Buck 固定占空比调试 (Task_Debug_Buck)
 #define BUCK_DEBUG_DUTY       0.50f  // 固定占空比 [0~1]

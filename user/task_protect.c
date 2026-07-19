@@ -39,7 +39,7 @@ void Task_Protect_Run(void)
         float i_abs = I_line[0];
         if (i_abs < 0.0f) i_abs = -i_abs;
         if (i_abs > IL1_OC) {
-            if (++cnt[0] >= 3)           // OC 用 3 次去抖 (更快响应)
+            if (++cnt[0] >= 3)           // OC 用 3 次去抖 (0.3ms)
                 g_fault_code = FAULT_OC_IL1;
         } else cnt[0] = 0;
     }
