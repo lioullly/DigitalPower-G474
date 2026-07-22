@@ -7,5 +7,6 @@ void vofa_send_frame(float data[10]);
 // 各拓扑的 VOFA 数据采集函数
 void vofa_capture_1p(void);    // 单相
 void vofa_capture_buck(void);  // Buck DCDC
+void vofa_capture_3p(void);    // 三相
 
 #endif

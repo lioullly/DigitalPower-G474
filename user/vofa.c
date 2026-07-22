@@ -32,19 +32,3 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
         vofa_tx_busy = 0;
 }
 
-// --- 单相 VOFA: 10 通道 ---
-void vofa_capture_1p(void)
-{
-    float data[10];
-    data[0] = I_line[0];
-    data[1] = g_irms;
-    data[2] = U_line[0];
-    data[3] = g_uab_rms;
-    data[4] = U_line[1];
-    data[5] = (float)g_fault_code;
-    data[6] = g_dbg_vctrl;
-    data[7] = g_dbg_err;
-    data[8] = g_cpu_usage;
-    data[9] = g_isr_khz;
-    vofa_send_frame(data);
-}

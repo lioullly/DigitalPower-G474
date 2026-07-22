@@ -9,6 +9,7 @@
 #include "task_control_pfc.h"
 #include "task_control_grid.h"
 #include "task_control_dcdc.h"
+#include "task_control_3p.h"
 #include "task_display_1p.h"
 #include "task_display_dcdc.h"
 #include "dac.h"
@@ -16,39 +17,6 @@
 #include "ssd1306.h"
 #include "ssd1306_fonts.h"
 #include <stdio.h>
-
-// ---- open-loop debug: fixed m=0.3, 50Hz sine from g_sin_wt ----
-void Task_Debug_SPWM(void)
-{
-    static uint8_t started = 0;
-
-    if (!Run_Flag) {
-        if (started) {
-            HAL_HRTIM_WaveformOutputStop(&hhrtim1,
-                HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
-                HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2 |
-                HRTIM_OUTPUT_TF1 | HRTIM_OUTPUT_TF2);
-            // 注意: 不停 Timer A counter, 它是 ADC 触发源
-            HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_RESET);
-            started = 0;
-        }
-        return;
-    }
-
-    if (!started) {
-        HAL_HRTIM_WaveformOutputStart(&hhrtim1,
-            HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
-            HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2 |
-            HRTIM_OUTPUT_TF1 | HRTIM_OUTPUT_TF2);
-        HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_SET);
-        started = 1;
-    }
-
-    float m = 0.3f * g_sin_wt;
-    _pwm_bipolar(m);
-}
 
 // ---- OLED display @ 5Hz, 由各拓扑的 g_display_fn 决定显示内容 ----
 void Task_Display(void)
@@ -84,27 +52,24 @@ void UserTasks_Init(void)
 
     // Select active control mode:
 //singlephase
-//  g_adc_preproc = adc_preproc_1p;
-//  g_display_fn  = Task_Display_1P;
-//  g_vofa_fn     = vofa_capture_1p;
+  g_adc_preproc = adc_preproc_1p;g_display_fn  = Task_Display_1P;g_vofa_fn     = vofa_capture_1p;
 
 //  g_control_isr = Task_Debug_SPWM;       // open-loop debug
 //  g_control_isr = Task_Control_OffGrid;  // off-grid inverter
 //  g_control_isr = Task_Control_Grid;     // grid-tied inverter
-//  g_control_isr = Task_Control_PFC;      // PFC rectifier
+  g_control_isr = Task_Control_PFC;      // PFC rectifier
 
+//threephase
+//  g_adc_preproc = adc_preproc_3p;g_display_fn  = Task_Display_1P;g_vofa_fn     = vofa_capture_3p;
 
+//  g_control_isr = Task_Debug_SVPWM;          // SVPWM open-loop test (M=0.3, 50Hz)
+//  g_control_isr = Task_Control_3P_OffGrid;  // 3-phase off-grid inverter
 
-//-----------
 //dcdc
-
-  g_adc_preproc = adc_preproc_buck;
-  g_display_fn  = Task_Display_Buck;
-  g_vofa_fn     = vofa_capture_buck;
+//  g_adc_preproc = adc_preproc_buck;g_display_fn  = Task_Display_Buck;g_vofa_fn     = vofa_capture_buck;
 
 //  g_control_isr = Task_Debug_Buck;       // Buck 固定占空比调试
-  g_control_isr = Task_Control_Buck;     // Buck DCDC
-//-----------
+//  g_control_isr = Task_Control_Buck;     // Buck DCDC
 
     // --- ADC init ---
     Task_ADC_Init();

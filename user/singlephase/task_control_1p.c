@@ -70,7 +70,6 @@ void Task_Control_OffGrid(void)
         HAL_HRTIM_WaveformCounterStart(&hhrtim1,
             HRTIM_TIMERID_TIMER_A | HRTIM_TIMERID_TIMER_B);
         g_protect_mask    = PROT_IL1_OC | PROT_ADC2_R1_OV | PROT_ADC2_R2_OV | PROT_ADC2_R2_UV;
-        g_protect_ac_mask = PROT_ADC2_R1_AC;
         g_display_fn      = Task_Display_1P;
         g_vofa_fn         = vofa_capture_1p;
     }
@@ -111,5 +110,41 @@ void Task_Control_OffGrid(void)
     g_dbg_err   = i_err;
     g_dbg_vctrl = v_ctrl;
 
+    _pwm_bipolar(m);
+}
+
+// ============================================================
+// 单相 SPWM 开环调试: 固定调制比 M=0.3, 50Hz
+// 用法: g_control_isr = Task_Debug_SPWM;
+// ============================================================
+void Task_Debug_SPWM(void)
+{
+    static uint8_t started = 0;
+
+    if (!Run_Flag) {
+        if (started) {
+            HAL_HRTIM_WaveformOutputStop(&hhrtim1,
+                HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
+                HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2 |
+                HRTIM_OUTPUT_TF1 | HRTIM_OUTPUT_TF2);
+            HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_RESET);
+            started = 0;
+        }
+        return;
+    }
+
+    if (!started) {
+        HAL_HRTIM_WaveformOutputStart(&hhrtim1,
+            HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
+            HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2 |
+            HRTIM_OUTPUT_TF1 | HRTIM_OUTPUT_TF2);
+        HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_SET);
+        g_protect_mask = PROT_IL1_OC;
+        started = 1;
+    }
+
+    float m = 0.3f * g_sin_wt;
     _pwm_bipolar(m);
 }

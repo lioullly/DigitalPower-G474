@@ -38,7 +38,6 @@
 #define PROT_ADC2_R4_AC   (1<<6)   // U_line[3] 为交流
 
 extern uint16_t g_protect_mask;
-extern uint16_t g_protect_ac_mask;
 extern uint8_t  g_fault_code;
 
 void Task_Protect_Run(void);

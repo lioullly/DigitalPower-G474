@@ -2,9 +2,8 @@
 #include "user.h"
 #include "hardware_def.h"
 
-uint8_t  g_fault_code     = FAULT_NONE;
-uint16_t g_protect_mask    = 0;
-uint16_t g_protect_ac_mask = 0;
+uint8_t  g_fault_code  = FAULT_NONE;
+uint16_t g_protect_mask = 0;
 
 #define FAULT_DELAY  10
 #define BLANK_MS     200
@@ -68,7 +67,7 @@ skip_oc:
     // --- Uab 过压 (U_line[0]) ---
     if (g_protect_mask & PROT_ADC2_R1_OV) {
         float v = U_line[0];
-        if (g_protect_ac_mask & PROT_ADC2_R1_AC) { if (v < 0.0f) v = -v; }
+        if (v < 0.0f) v = -v;
         if (v > DC_OV) {
             if (++cnt[3] >= FAULT_DELAY)
                 g_fault_code = FAULT_OV;
@@ -78,7 +77,7 @@ skip_oc:
     // --- Udc 过压 (U_line[1], 母线) ---
     if (g_protect_mask & PROT_ADC2_R2_OV) {
         float v = U_line[1];
-        if (g_protect_ac_mask & PROT_ADC2_R2_AC) { if (v < 0.0f) v = -v; }
+        if (v < 0.0f) v = -v;
         if (v > DC_OV) {
             if (++cnt[4] >= FAULT_DELAY)
                 g_fault_code = FAULT_OV;
@@ -88,7 +87,7 @@ skip_oc:
     // --- Uac 过压 (U_line[2]) ---
     if (g_protect_mask & PROT_ADC2_R3_OV) {
         float v = U_line[2];
-        if (g_protect_ac_mask & PROT_ADC2_R3_AC) { if (v < 0.0f) v = -v; }
+        if (v < 0.0f) v = -v;
         if (v > DC_OV) {
             if (++cnt[5] >= FAULT_DELAY)
                 g_fault_code = FAULT_OV;
@@ -98,7 +97,7 @@ skip_oc:
     // --- Ubc 过压 (U_line[3]) ---
     if (g_protect_mask & PROT_ADC2_R4_OV) {
         float v = U_line[3];
-        if (g_protect_ac_mask & PROT_ADC2_R4_AC) { if (v < 0.0f) v = -v; }
+        if (v < 0.0f) v = -v;
         if (v > DC_OV) {
             if (++cnt[6] >= FAULT_DELAY)
                 g_fault_code = FAULT_OV;

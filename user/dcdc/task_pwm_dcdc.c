@@ -4,7 +4,9 @@
 #define PWM_PERIOD  51200U
 
 // Buck PWM: Timer A 单半桥, TA1/TA2 互补 + 硬件死区
-// duty ∈ [0, 1], 中心对齐, CMP=0 时上管全关
+// duty ∈ [0, 1], 中心对齐, 输出低有效: CMP = duty * PERIOD
+// duty=0 → CMP=0 → 上管全关
+// duty=1 → CMP=PERIOD → 上管全开
 void _pwm_buck(float duty)
 {
     if (duty > 0.95f) duty = 0.95f;

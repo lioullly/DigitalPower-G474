@@ -233,3 +233,52 @@ float f32_Notch_Calculate(Notch_TypeDef *N, float input)
 	N->y1 = y;
 	return y;
 }
+
+// ============================================================
+// Type-II 补偿器: PI + 高频极点, 复用 PR 双二阶结构体
+// C(s) = gain * (s + ωz) / (s * (s + ωp))
+// 零点 fz 消静差, 极点 fp 滤高频噪声
+// ============================================================
+void f32_Type2_Init(PR_TypeDef *C, float fz, float fp, float gain, float Fs)
+{
+	float Ts = 1.0f / Fs;
+	// 匹配 z 变换: z = e^(-ω*Ts)
+	float az = expf(-2.0f * PI * fz * Ts);  // 零点
+	float ap = expf(-2.0f * PI * fp * Ts);  // 极点
+
+	// H(z) = gain * (1 - az*z⁻¹) / ((1 - z⁻¹)*(1 - ap*z⁻¹))
+	//      = gain * (1 - az*z⁻¹) / (1 - (1+ap)*z⁻¹ + ap*z⁻²)
+	C->b0 = gain;
+	C->b1 = -gain * az;
+	C->b2 = 0.0f;
+	C->a1 = -(1.0f + ap);   // note: a1, a2 in PR are coefficients of y terms
+	C->a2 = ap;             // the diff eq is: y = b0*x - a1*y1 - a2*y2 + b1*x1
+
+	C->x0 = C->x1 = C->x2 = 0.0f;
+	C->y0 = C->y1 = C->y2 = 0.0f;
+	C->Kp = gain;  // store gain for reference
+	C->Kr = fz;    // store fz
+	C->f0 = fp;    // store fp
+	C->Fs = Fs;
+	C->TH = 32767;
+	C->TL = -32768;
+}
+
+float f32_Type2_Calculate(PR_TypeDef *C, float error)
+{
+	// 双二阶: y = b0*x0 + b1*x1 + b2*x2 - a1*y1 - a2*y2
+	float y = C->b0 * error + C->b1 * C->x1 + C->b2 * C->x2
+	        - C->a1 * C->y1 - C->a2 * C->y2;
+
+	// 钳位
+	if (y > (float)C->TH) y = (float)C->TH;
+	if (y < (float)C->TL) y = (float)C->TL;
+
+	// 状态更新
+	C->x2 = C->x1;
+	C->x1 = error;
+	C->y2 = C->y1;
+	C->y1 = y;
+	C->y0 = y;
+	return y;
+}

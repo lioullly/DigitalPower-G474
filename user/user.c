@@ -12,7 +12,7 @@ PR_TypeDef Current_PR_Loop_alpha;
 Integral_TypeDef Sine_Phase_Integrator;
 float U_line[4] = {0}, I_line[3] = {0};
 float g_duty_a = 0.5f, g_duty_b = 0.5f, g_duty_c = 0.5f;
-float g_uab_rms = 0.0f, I_mag = 1.0f, g_irms = 0.0f;
+float g_uab_rms = 0.0f, g_ubc_rms = 0.0f, I_mag = 1.0f, g_irms = 0.0f;
 float U_coefficient, current_const;
 float Iref_alpha = 0.0f, Iref_beta = 0.0f;
 volatile int32_t g_il1, g_il2, g_il3;

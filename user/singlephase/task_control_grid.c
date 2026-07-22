@@ -68,7 +68,6 @@ void Task_Control_Grid(void)
         HAL_HRTIM_WaveformCounterStart(&hhrtim1,
             HRTIM_TIMERID_TIMER_B);
         g_protect_mask    = PROT_IL1_OC | PROT_ADC2_R1_OV | PROT_ADC2_R2_OV | PROT_ADC2_R2_UV;
-        g_protect_ac_mask = PROT_ADC2_R1_AC;
         g_display_fn      = Task_Display_1P;
         g_vofa_fn         = vofa_capture_1p;
     }

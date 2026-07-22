@@ -88,4 +88,8 @@ typedef struct
 void f32_Notch_Init(Notch_TypeDef *N, float f0, float Q, float Fs);
 float f32_Notch_Calculate(Notch_TypeDef *N, float input);
 
+// Type-II 补偿器 (PI + 高频极点), 复用 PR 结构体
+void f32_Type2_Init(PR_TypeDef *C, float fz, float fp, float gain, float Fs);
+float f32_Type2_Calculate(PR_TypeDef *C, float error);
+
 #endif

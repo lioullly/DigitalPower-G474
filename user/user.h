@@ -23,7 +23,7 @@ extern uint8_t g_pll_locked;
 extern float g_freq_est;
 extern volatile float g_sin_wt;
 extern float g_duty_a, g_duty_b, g_duty_c;
-extern float g_uab_rms, I_mag, g_irms, U_coefficient, current_const;
+extern float g_uab_rms, g_ubc_rms, I_mag, g_irms, U_coefficient, current_const;
 extern float Iref_alpha, Iref_beta;
 extern volatile int32_t g_il1, g_il2, g_il3;
 extern volatile uint8_t g_adc_data_ready;
@@ -41,5 +41,6 @@ extern void (*g_vofa_fn)(void);     // VOFA 采集函数
 // 各拓扑的 ADC 预处理函数
 void adc_preproc_1p(void);
 void adc_preproc_buck(void);
+void adc_preproc_3p(void);
 
 #endif
