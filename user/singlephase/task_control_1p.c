@@ -69,6 +69,7 @@ void Task_Control_OffGrid(void)
             HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2);
         HAL_HRTIM_WaveformCounterStart(&hhrtim1,
             HRTIM_TIMERID_TIMER_A | HRTIM_TIMERID_TIMER_B);
+        g_mode_label      = "OFFGRID";
         g_protect_mask    = PROT_IL1_OC | PROT_ADC2_R1_OV | PROT_ADC2_R2_OV | PROT_ADC2_R2_UV;
         g_display_fn      = Task_Display_1P;
         g_vofa_fn         = vofa_capture_1p;
@@ -125,8 +126,9 @@ void Task_Debug_SPWM(void)
         if (started) {
             HAL_HRTIM_WaveformOutputStop(&hhrtim1,
                 HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
-                HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2 |
-                HRTIM_OUTPUT_TF1 | HRTIM_OUTPUT_TF2);
+                HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2);
+            HAL_HRTIM_WaveformCounterStop(&hhrtim1,
+                HRTIM_TIMERID_TIMER_B);
             HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_RESET);
             HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_RESET);
             started = 0;
@@ -134,17 +136,20 @@ void Task_Debug_SPWM(void)
         return;
     }
 
+    
     if (!started) {
         HAL_HRTIM_WaveformOutputStart(&hhrtim1,
             HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
-            HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2 |
-            HRTIM_OUTPUT_TF1 | HRTIM_OUTPUT_TF2);
+            HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2);
+        HAL_HRTIM_WaveformCounterStart(&hhrtim1,
+            HRTIM_TIMERID_TIMER_B);
         HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_SET);
-        g_protect_mask = PROT_IL1_OC;
+        g_mode_label    = "SPWM TEST";
+        g_protect_mask  = PROT_IL1_OC;
         started = 1;
     }
 
-    float m = 0.3f * g_sin_wt;
+    float m = 0.6f * g_sin_wt;
     _pwm_bipolar(m);
 }

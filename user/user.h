@@ -37,6 +37,7 @@ extern uint8_t g_oled_ok;
 extern void (*g_adc_preproc)(void); // ADC ISR 预处理 @50kHz (电压填充/锁相/DAC/RMS)
 extern void (*g_display_fn)(void);  // OLED 显示函数
 extern void (*g_vofa_fn)(void);     // VOFA 采集函数
+extern const char *g_mode_label;    // 当前模式标签 (显示在 OLED 第4行)
 
 // 各拓扑的 ADC 预处理函数
 void adc_preproc_1p(void);

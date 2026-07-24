@@ -23,7 +23,7 @@ void Task_ADC_Init(void)
 
     HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
 
-    f32_Integral_Init(&Sine_Phase_Integrator, 1.0f/48730.0f, 1.0f);
+    f32_Integral_Init(&Sine_Phase_Integrator, 1.0f/20000.0f, 1.0f);  // 20kHz ISR
     Sine_Phase_Integrator.x1 = 50.0f;  // pre-charge, avoid half-step on first call
 }
 

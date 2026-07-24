@@ -42,7 +42,7 @@ void Task_Display(void)
 
 void UserTasks_Init(void)
 {
-    Scheduler_Init(20);
+    Scheduler_Init(50);  // 20kHz tick → 50μs
     // Control & protect run in ADC ISR @ 10kHz — no scheduler jitter
     Scheduler_AddTask(Task_Button_Scan,         100,    1);
     Scheduler_AddTask(Task_Display,             5,      1);
@@ -55,7 +55,7 @@ void UserTasks_Init(void)
   g_adc_preproc = adc_preproc_1p;g_display_fn  = Task_Display_1P;g_vofa_fn     = vofa_capture_1p;
 
 //  g_control_isr = Task_Debug_SPWM;       // open-loop debug
-//  g_control_isr = Task_Control_OffGrid;  // off-grid inverter
+// g_control_isr = Task_Control_OffGrid;  // off-grid inverter
 //  g_control_isr = Task_Control_Grid;     // grid-tied inverter
   g_control_isr = Task_Control_PFC;      // PFC rectifier
 
@@ -99,9 +99,9 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef* hadc)
     if (g_adc_preproc)
         g_adc_preproc();
 
-    // 3. Decimate 5:1 → 10kHz for protection, control, VOFA
+    // 3. ISR=20kHz, 2:1 → control=10kHz
     static uint8_t decim = 0;
-    if (++decim >= 5) {
+    if (++decim >= 2) {
         decim = 0;
 
         Task_Protect_Run();

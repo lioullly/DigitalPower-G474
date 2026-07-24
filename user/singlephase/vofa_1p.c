@@ -20,6 +20,6 @@ void vofa_capture_1p(void)
     data[6] = g_dbg_vctrl;
     data[7] = g_dbg_err;
     data[8] = g_cpu_usage;
-    data[9] = g_isr_khz;
+    data[9] = g_pfc_phase_deg;  // debug: 看按键是否改变了相位
     vofa_send_frame(data);
 }

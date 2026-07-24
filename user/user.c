@@ -29,6 +29,7 @@ uint16_t adc2_voltage_buffer[4];
 void (*g_adc_preproc)(void) = NULL;
 void (*g_display_fn)(void)  = NULL;
 void (*g_vofa_fn)(void)     = NULL;
+const char *g_mode_label    = "";
 
 void user_Init(void)
 {
@@ -65,9 +66,20 @@ void user_Init(void)
 
     __HAL_UART_DISABLE_IT(&huart1, UART_IT_RXNE);  // RX not used, keep USART1 IRQ for TX TC chain
 
-    HAL_HRTIM_WaveformCounterStart(&hhrtim1, HRTIM_TIMERID_MASTER);
+    HAL_HRTIM_WaveformCounterStart(&hhrtim1, HRTIM_TIMERID_MASTER);  // scheduler tick
     HAL_HRTIM_WaveformCounterStart(&hhrtim1, HRTIM_TIMERID_TIMER_A);  // ADC trigger source
     HRTIM1->sMasterRegs.MDIER |= HRTIM_MDIER_MCMP1IE;  // re-apply after CubeMX clobber
+
+    // TA2/TB2 = complement of TA1/TB1 (CubeMX UI blocks this with DeadTimeInsertion)
+    HRTIM_OutputCfgTypeDef ocfg = {0};
+    ocfg.Polarity = HRTIM_OUTPUTPOLARITY_HIGH;
+    ocfg.SetSource = HRTIM_OUTPUTSET_TIMPER;
+    ocfg.ResetSource = HRTIM_OUTPUTRESET_TIMCMP1;
+    ocfg.IdleMode = HRTIM_OUTPUTIDLEMODE_NONE;
+    ocfg.IdleLevel = HRTIM_OUTPUTIDLELEVEL_INACTIVE;
+    ocfg.FaultLevel = HRTIM_OUTPUTFAULTLEVEL_NONE;
+    HAL_HRTIM_WaveformOutputConfig(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_OUTPUT_TA2, &ocfg);
+    HAL_HRTIM_WaveformOutputConfig(&hhrtim1, HRTIM_TIMERINDEX_TIMER_B, HRTIM_OUTPUT_TB2, &ocfg);
 
     UserTasks_Init();
 }

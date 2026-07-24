@@ -29,5 +29,8 @@ void Task_Display_1P(void)
     ssd1306_SetCursor(0, 28);
     ssd1306_WriteString(buf, Font_7x10, White);
 
+    ssd1306_SetCursor(0, 43);
+    ssd1306_WriteString((char *)g_mode_label, Font_7x10, White);
+
     ssd1306_UpdateScreen();
 }

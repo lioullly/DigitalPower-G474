@@ -20,7 +20,6 @@ void Task_Control_PFC(void)
     static float    iref = 0.05f;
 
     if (!Run_Flag) {
-        HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_RESET);
         if (prev_active) {
             HAL_HRTIM_WaveformOutputStop(&hhrtim1,
@@ -46,7 +45,6 @@ void Task_Control_PFC(void)
     uint8_t rising = (active && !prev_active);
 
     if (!active && prev_active) {
-        HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_RESET);
         HAL_HRTIM_WaveformOutputStop(&hhrtim1,
             HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
@@ -60,19 +58,20 @@ void Task_Control_PFC(void)
 
     // --- one-shot init ---
     if (rising) {
-        HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
         f32_PR_Init(&Current_PR_Loop_alpha, 4.0f, 10.0f, 50.0f, 10.0f, 10000.0f, PR_CTRL_CLAMP, -PR_CTRL_CLAMP);
-        f32_PI_Init(&v_pi, 0.001f, 0.1f, 2.0f, 10, -1);
+        f32_PI_Init(&v_pi, 0.001f, 0.2f, 2.0f, 10, -1);
         f32_Hilbert_Init(&hilbert, 50.0f, 10000.0f);
-        f32_Notch_Init(&udc_notch, 100.0f, 1.0f, 1000.0f);
+        f32_Notch_Init(&udc_notch, 100.0f, 5.0f, 1000.0f);
         iref = 0.05f;
         v_cnt = 0;
+        g_pfc_phase_deg = acosf(PFC_PF_DEFAULT) * (180.0f / PI);  // PF → 角度
         HAL_HRTIM_WaveformOutputStart(&hhrtim1,
             HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
             HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2);
         HAL_HRTIM_WaveformCounterStart(&hhrtim1,
             HRTIM_TIMERID_TIMER_B);
+        g_mode_label      = "PFC";
         g_protect_mask    = PROT_IL1_OC | PROT_ADC2_R1_OV | PROT_ADC2_R2_OV | PROT_ADC2_R2_UV;
         g_display_fn      = Task_Display_1P;
         g_vofa_fn         = vofa_capture_1p;

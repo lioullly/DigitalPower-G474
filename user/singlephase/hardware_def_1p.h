@@ -17,8 +17,8 @@
 #define GRID_PHI_DEG_DEFAULT 0.0f  // initial power angle [°], 0=UPF
 
 // --- PFC (task_control_pfc.c) ---
-#define PFC_UREF            40.0f   // DC bus voltage reference [V]
+#define PFC_UREF             40.0f   // DC bus voltage reference [V]
 #define PFC_IREF_MAX         5.66f  // max RMS current [A], peak ~8A
-#define PFC_PHASE_DEG_DEFAULT 30.0f  // initial phase shift [°]
+#define PFC_PF_DEFAULT       1.0f  // initial power factor [0~1]
 
 #endif
