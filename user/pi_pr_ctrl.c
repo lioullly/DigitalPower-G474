@@ -144,15 +144,20 @@ float f32_Integral_Calculate(Integral_TypeDef *I_pamer, float _X)
 }
 
 // 定义一个函数，用于初始化PI控制器，参数为PI结构体指针和采样时间、比例系数、积分系数、输出上下限
-void f32_PI_Init(PI_TypeDef *PI_Pamer, float _Ts, float _Kp, float _Ki, int16_t _TH, int16_t _TL)
+void f32_PI_Init(PI_TypeDef *PI_Pamer, float _Ts, float _Kp, float _Ki, float _TH, float _TL)
 {
-	PI_Pamer->Ts = _Ts;							// 将采样时间赋值给结构体中的Ts变量
-	PI_Pamer->Kp = _Kp;							// 将比例系数赋值给结构体中的Kp变量
-	PI_Pamer->Ki = _Ki;							// 将积分系数赋值给结构体中的Ki变量
-	PI_Pamer->filter_B1 = _Kp + _Ts * _Ki / 2;	// 计算滤波器参数B1的值，表示PI控制器中的一个系数
-	PI_Pamer->filter_B2 = -_Kp + _Ts * _Ki / 2; // 计算滤波器参数B2的值，表示PI控制器中的一个系数
-	PI_Pamer->TH = _TH;							// 将输出上限赋值给结构体中的TH变量
-	PI_Pamer->TL = _TL;							// 将输出下限赋值给结构体中的TL变量
+	PI_Pamer->Ts = _Ts;
+	PI_Pamer->Kp = _Kp;
+	PI_Pamer->Ki = _Ki;
+	PI_Pamer->filter_B1 = _Kp + _Ts * _Ki / 2;
+	PI_Pamer->filter_B2 = -_Kp + _Ts * _Ki / 2;
+	PI_Pamer->TH = _TH;
+	PI_Pamer->TL = _TL;
+	// Clear all states to prevent carryover from previous runs
+	PI_Pamer->x0 = 0.0f;
+	PI_Pamer->x1 = 0.0f;
+	PI_Pamer->y0 = 0.0f;
+	PI_Pamer->y1 = 0.0f;
 }
 
 // 定义一个函数，用于计算PI控制器的输出，参数为PI结构体指针和参考值、采样值

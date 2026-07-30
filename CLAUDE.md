@@ -18,12 +18,11 @@ CMake + Ninja + arm-none-eabi-gcc 编译，STM32CubeMX 生成 HAL 初始化代�
 ## 编译
 
 ```bash
-cd build
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug ..
-ninja
+cmake --preset Debug
+cmake --build build/Debug
 ```
 
-- 新增 `.c` 文件后需删 `CMakeCache.txt` 重跑 cmake（CMakeLists.txt 用 `GLOB` 收集源文件，不自动感知新文件）
+- 新增 `.c` 文件后需删 `build/` 重跑 cmake（CMakeLists.txt 用 `GLOB` 收集源文件，不自动感知新文件）
 - CubeMX 重新生成后，**只在 `USER CODE BEGIN/END` 区间内保留用户代码**，其余会被覆盖
 - 用户代码放在 `user/` 目录，CubeMX 不管理
 

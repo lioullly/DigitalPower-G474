@@ -8,7 +8,7 @@ set(CMAKE_CXX_COMPILER_ID GNU)
 
 # Some default GCC settings
 # Use absolute paths so PATH does not need to include the toolchain
-set(TOOLCHAIN_DIR "C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/13.3 rel1/bin")
+set(TOOLCHAIN_DIR "C:/Users/qmal1/Documents/STM32CubeMX/toolchains/arm-gnu-13.3/bin")
 
 set(CMAKE_C_COMPILER                "${TOOLCHAIN_DIR}/arm-none-eabi-gcc.exe")
 set(CMAKE_ASM_COMPILER              "${CMAKE_C_COMPILER}")

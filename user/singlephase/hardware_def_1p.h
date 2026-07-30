@@ -4,9 +4,9 @@
 #include "../hardware_def.h"
 
 // --- off-grid inverter (task_control_1p.c) ---
-#define OFFGRID_UREF        32.0f   // AC output RMS voltage reference [V]
+#define OFFGRID_UREF        10.0f   // AC output RMS voltage reference [V]
 #define OFFGRID_IREF_MAX     5.0f   // max RMS current [A], peak ~7A
-#define OFFGRID_UDC_MIN     50.0f   // min DC bus to start [V]
+#define OFFGRID_UDC_MIN     30.0f   // min DC bus to start [V]
 #define I_MAG_DEFAULT        1.0f   // initial rms current [A]
 #define I_MAG_MAX           10.0f   // PI upper clamp [A]
 
@@ -17,8 +17,8 @@
 #define GRID_PHI_DEG_DEFAULT 0.0f  // initial power angle [°], 0=UPF
 
 // --- PFC (task_control_pfc.c) ---
-#define PFC_UREF            40.0f   // DC bus voltage reference [V]
-#define PFC_IREF_MAX         5.66f  // max RMS current [A], peak ~8A
-#define PFC_PHASE_DEG_DEFAULT 30.0f  // initial phase shift [°]
+#define PFC_UREF            65.0f   // DC bus voltage reference [V]
+#define PFC_IREF_MAX         7.0f  // max RMS current [A], peak ~9.9A
+#define PFC_PHASE_DEG_DEFAULT 0.0f  // initial phase shift [°]
 
 #endif

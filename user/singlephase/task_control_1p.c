@@ -14,21 +14,20 @@ void Task_Control_OffGrid(void)
 {
     static uint8_t  prev_active = 0;
     static uint16_t v_cnt = 0;
+    static uint16_t oc_delay = 0;
     static PI_TypeDef v_pi;
     static float    iref = 0.0f;
 
     if (!Run_Flag) {
-        HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_RESET);
         if (prev_active) {
             HAL_HRTIM_WaveformOutputStop(&hhrtim1,
                 HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
                 HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2);
-            HAL_HRTIM_WaveformCounterStop(&hhrtim1,
-                HRTIM_TIMERID_TIMER_B);
         }
         prev_active = 0;
         v_cnt = 0;
+        g_dbg_iref = -2.0f;  // VOFA marker: stopped
         return;
     }
 
@@ -41,48 +40,50 @@ void Task_Control_OffGrid(void)
     uint8_t rising = (active && !prev_active);
 
     if (!active && prev_active) {
-        HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_RESET);
         HAL_HRTIM_WaveformOutputStop(&hhrtim1,
             HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
             HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2);
-        HAL_HRTIM_WaveformCounterStop(&hhrtim1,
-            HRTIM_TIMERID_TIMER_B);
     }
     prev_active = active;
 
-    if (!active) return;
+    if (!active) {
+        g_dbg_iref = -1.0f;  // VOFA marker: waiting for activation
+        return;
+    }
 
     // --- one-shot init ---
-    static float soft_max = 0.1f;  // soft-start ramp ceiling
-
     if (rising) {
-        HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
-        f32_PR_Init(&Current_PR_Loop_alpha, 4.0f, 10.0f, 50.0f, 10.0f, 10000.0f, PR_CTRL_CLAMP, -PR_CTRL_CLAMP);
-        f32_PI_Init(&v_pi, 0.005f, 0.1f, 0.5f, OFFGRID_IREF_MAX, 0);
-        soft_max = 0.1f;
-        iref = 0.0f;
-        v_cnt = 0;
         HAL_HRTIM_WaveformOutputStart(&hhrtim1,
             HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
             HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2);
-        HAL_HRTIM_WaveformCounterStart(&hhrtim1,
-            HRTIM_TIMERID_TIMER_A | HRTIM_TIMERID_TIMER_B);
-        g_protect_mask    = PROT_IL1_OC | PROT_ADC2_R1_OV | PROT_ADC2_R2_OV | PROT_ADC2_R2_UV;
+        f32_PR_Init(&Current_PR_Loop_alpha, 2.0f, 100.0f, 50.0f, 20.0f, 20000.0f, PR_CTRL_CLAMP, -PR_CTRL_CLAMP);
+        f32_PI_Init(&v_pi, 0.005f, 0.05f, 1.0f, OFFGRID_IREF_MAX, 0);
+        iref = 0.0f;
+        v_cnt = 0;
+        oc_delay = 0;
+        // Start without OC — enable after 50ms ramp
+        g_protect_mask    = PROT_UAC_OV | PROT_UDC_OV | PROT_UDC_UV;
         g_display_fn      = Task_Display_1P;
         g_vofa_fn         = vofa_capture_1p;
+    }
+
+    // --- OC enable delay: 50ms after activation ---
+    if (oc_delay < 500) {
+        oc_delay++;
+        if (oc_delay >= 500)
+            g_protect_mask |= PROT_IL1_OC;
     }
 
     // --- voltage loop: decimate 10kHz→200Hz ---
     if (++v_cnt >= 50) {
         v_cnt = 0;
-        // soft-start ramp: 0.1A → OFFGRID_IREF_MAX over ~1s
-        if (soft_max < OFFGRID_IREF_MAX)
-            soft_max += 0.1f;  // +0.1A/step @ 200Hz = +20A/s
         float tmp = f32_PI_Calculate(&v_pi, OFFGRID_UREF, g_uab_rms);
-        if (tmp >  soft_max) tmp =  soft_max;
-        if (tmp < 0.0f)      tmp = 0.0f;
+        // Asymmetric ramp: slow up, fast down
+        if (tmp > iref + 0.5f) tmp = iref + 0.5f;
+        if (tmp > OFFGRID_IREF_MAX) tmp = OFFGRID_IREF_MAX;
+        if (tmp < 0.0f) tmp = 0.0f;
         iref = tmp;
     }
 
@@ -107,8 +108,11 @@ void Task_Control_OffGrid(void)
     if (udc < 1.0f) udc = 1.0f;
     float m = v_ref / udc;
 
-    g_dbg_err   = i_err;
-    g_dbg_vctrl = v_ctrl;
+    g_dbg_err      = i_err;
+    g_dbg_vctrl    = v_ctrl;
+    g_dbg_iref     = iref;
+    g_dbg_iref_inst = i_ref;
+    g_dbg_m        = m;
 
     _pwm_bipolar(m);
 }
@@ -125,26 +129,29 @@ void Task_Debug_SPWM(void)
         if (started) {
             HAL_HRTIM_WaveformOutputStop(&hhrtim1,
                 HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
-                HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2 |
-                HRTIM_OUTPUT_TF1 | HRTIM_OUTPUT_TF2);
+                HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2);
             HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_RESET);
             started = 0;
         }
+        g_dbg_iref = -2.0f;  // VOFA marker: stopped
         return;
     }
 
     if (!started) {
+        HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
         HAL_HRTIM_WaveformOutputStart(&hhrtim1,
             HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2 |
-            HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2 |
-            HRTIM_OUTPUT_TF1 | HRTIM_OUTPUT_TF2);
-        HAL_GPIO_WritePin(Red_GPIO_Port, Red_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(key_relay_GPIO_Port, key_relay_Pin, GPIO_PIN_SET);
+            HRTIM_OUTPUT_TB1 | HRTIM_OUTPUT_TB2);
         g_protect_mask = PROT_IL1_OC;
         started = 1;
     }
 
     float m = 0.3f * g_sin_wt;
+    g_dbg_iref     = 1.0f;    // VOFA marker: running
+    g_dbg_iref_inst = g_sin_wt;
+    g_dbg_m        = m;
+    g_dbg_err      = I_line[0];
+    g_dbg_vctrl    = U_line[1];
+
     _pwm_bipolar(m);
 }

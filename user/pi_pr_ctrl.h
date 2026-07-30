@@ -22,8 +22,8 @@ typedef struct
 	float Kp, Ki ,Ts;
 	float y0, y1;
 	float filter_B1, filter_B2;
-	int16_t TH;
-	int16_t TL;
+	float TH;
+	float TL;
 } PI_TypeDef;
 
 // PR 控制器结构体（使用二阶带通/双二阶近似共振）
@@ -51,7 +51,7 @@ static inline float MyFmod(float _X, float _Y)
 void f32_Integral_Init(Integral_TypeDef *I_pamer, float _Ts, float Intergral_MAX); //浮点积分初始化
 float f32_Integral_Calculate(Integral_TypeDef *I_pamer, float _X); //浮点积分运算
 
-void f32_PI_Init(PI_TypeDef *PI_Pamer, float _Ts, float _Kp, float _Ki, int16_t _TH, int16_t _TL);
+void f32_PI_Init(PI_TypeDef *PI_Pamer, float _Ts, float _Kp, float _Ki, float _TH, float _TL);
 float f32_PI_Calculate(PI_TypeDef *PI_Pamer, float REF, float Sample);
 
 // PR 控制器接口

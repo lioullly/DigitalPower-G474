@@ -10,7 +10,7 @@ void Task_Display_1P(void)
     char buf[24];
     ssd1306_Fill(Black);
 
-    snprintf(buf, sizeof(buf), "Uab%5.0fV %4.1fHz",
+    snprintf(buf, sizeof(buf), "Uac%5.0fV %4.1fHz",
              (double)g_uab_rms, (double)g_freq_est);
     ssd1306_SetCursor(0, 2);
     ssd1306_WriteString(buf, Font_7x10, White);
@@ -23,9 +23,9 @@ void Task_Display_1P(void)
     if (g_fault_code)
         snprintf(buf, sizeof(buf), "FAULT:%d", g_fault_code);
     else if (!Run_Flag)
-        snprintf(buf, sizeof(buf), "STOP");
+        snprintf(buf, sizeof(buf), "STOP  %s", g_task_name);
     else
-        snprintf(buf, sizeof(buf), "RUN");
+        snprintf(buf, sizeof(buf), "RUN   %s", g_task_name);
     ssd1306_SetCursor(0, 28);
     ssd1306_WriteString(buf, Font_7x10, White);
 
